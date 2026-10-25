@@ -5,7 +5,7 @@
 便于按时间聚合。重跑会跳过已完成的图片（断点续跑）。
 
 用法:
-    python infer.py outputs/movie_eval.jsonl --base-url http://127.0.0.1:8000
+    python infer.py outputs/movie_eval.jsonl --base-url http://127.0.0.1:8080
     python infer.py outputs/movie_eval.jsonl -o outputs/movie_vlm.jsonl -w 16
 """
 
@@ -47,7 +47,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("eval_jsonl", help="eval.py 输出的 jsonl（视频输入）")
     parser.add_argument("-o", "--output", default=None, help="默认 <eval_jsonl 同名>_vlm.jsonl")
-    parser.add_argument("--base-url", default=os.environ.get("VLM_BASE_URL", "http://127.0.0.1:8000"),
+    parser.add_argument("--base-url", default=os.environ.get("VLM_BASE_URL", "http://127.0.0.1:8080"),
                         help="已部署 VLM 的服务地址")
     parser.add_argument("--model", default=None, help="模型名，默认从 /v1/models 自动获取")
     parser.add_argument("--api-key", default=None, help="默认 dummy；也可用环境变量 AIO_API_KEY")
