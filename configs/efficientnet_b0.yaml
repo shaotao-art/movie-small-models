@@ -1,0 +1,25 @@
+seed: 42
+output_dir: outputs
+
+data:
+  root: ./data/subtitle_cls
+  image_size: 224
+  num_workers: 8
+
+model:
+  name: efficientnet_b0
+  num_classes: 2
+  pretrained: true
+
+train:
+  global_batch_size: 128
+  max_micro_batch_size: null
+  epochs: 10
+  lr: 0.001
+  weight_decay: 0.0001
+  log_freq: 20
+  amp: true
+
+swanlab:
+  project: subtitle-cls
+  experiment_name: efficientnet_b0

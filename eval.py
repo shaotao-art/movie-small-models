@@ -1,0 +1,126 @@
+#!/usr/bin/env python
+"""对视频 / 单张图片 / 图片列表跑分类器，所有推理结果写到一个 jsonl。
+
+用法:
+    python eval.py --ckpt outputs/resnet18/best.pth --video movie.mp4
+    python eval.py --ckpt outputs/resnet18/best.pth --image data/frames/xxx/frame_000001.jpg
+    python eval.py --ckpt outputs/resnet18/best.pth --image-list list.txt -o preds.jsonl
+    # 可组合；抽帧间隔默认 60s
+"""
+
+import argparse
+import json
+import logging
+import os
+
+import torch
+from PIL import Image
+from torchvision.datasets import ImageFolder
+
+from data import _transforms
+from data_making.build_cls_dataset import resolve_image
+from data_making.get_frames import default_out_dir, extract_frames
+from model import build_model
+from utils import load_config
+
+logger = logging.getLogger("eval")
+
+
+def read_list(path):
+    """每行一个图片路径；也兼容 {"image": ...} 的 jsonl。"""
+    paths = []
+    with open(path) as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                paths.append(json.loads(line)["image"] if line.startswith("{") else line)
+    return paths
+
+
+def resolve(path):
+    real = resolve_image(path)  # 兼容 jsonl 里 "frames/..." 的旧路径
+    if real is None:
+        raise FileNotFoundError(path)
+    return real
+
+
+@torch.no_grad()
+def predict(model, paths, tf, device, batch_size):
+    probs = []
+    for i in range(0, len(paths), batch_size):
+        tensors = []
+        for p in paths[i:i + batch_size]:
+            with Image.open(p) as im:
+                tensors.append(tf(im.convert("RGB")))
+        probs += model(torch.stack(tensors).to(device)).softmax(1).cpu().tolist()
+    return probs
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--ckpt", required=True, help="训练产出的 best.pth / last.pth")
+    parser.add_argument("--config", default=None, help="不传则用 ckpt 里保存的配置")
+    parser.add_argument("--video", action="append", default=[], help="视频路径，可重复")
+    parser.add_argument("--image", action="append", default=[], help="单张图片，可重复")
+    parser.add_argument("--image-list", action="append", default=[], help="图片列表文件，可重复")
+    parser.add_argument("--classes", default=None, help="逗号分隔的类别顺序，默认从训练集目录推断")
+    parser.add_argument("-o", "--output", default="outputs/eval_results.jsonl")
+    parser.add_argument("--interval", type=float, default=60.0, help="视频抽帧间隔（秒），默认 60")
+    parser.add_argument("--frames-dir", default=None, help="视频抽帧目录，默认 data/frames/<md5(文件名)>")
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    args = parser.parse_args(argv)
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+
+    ckpt = torch.load(args.ckpt, map_location="cpu", weights_only=False)
+    cfg = load_config(args.config) if args.config else ckpt["config"]
+    classes = args.classes.split(",") if args.classes else \
+        ImageFolder(os.path.join(cfg["data"]["root"], "train")).classes
+    if len(classes) != cfg["model"]["num_classes"]:
+        parser.error(f"{len(classes)} classes {classes} != model.num_classes {cfg['model']['num_classes']}")
+
+    model = build_model(dict(cfg["model"], pretrained=False))  # 权重来自 ckpt，不下载预训练
+    model.load_state_dict(ckpt["model"])
+    model.to(args.device).eval()
+    tf = _transforms(cfg["data"]["image_size"])[1]
+
+    items = []  # (图片路径, 附加字段)
+    for video in args.video:
+        frames_dir = args.frames_dir or default_out_dir(video)
+        extract_frames(video, frames_dir, args.interval)
+        frames = sorted(f for f in os.listdir(frames_dir) if f.startswith("frame_") and f.endswith(".jpg"))
+        for name in frames:
+            idx = int(name[len("frame_"):-len(".jpg")])
+            items.append((os.path.join(frames_dir, name), {
+                "source": "video", "video": os.path.abspath(video),
+                "timestamp": (idx - 1) * args.interval,
+            }))
+    for image in args.image:
+        items.append((resolve(image), {"source": "image"}))
+    for list_file in args.image_list:
+        items += [(resolve(p), {"source": "image_list", "list": list_file}) for p in read_list(list_file)]
+    if not items:
+        parser.error("至少需要 --video / --image / --image-list 之一")
+
+    logger.info("%d images, classes=%s", len(items), classes)
+    probs = predict(model, [p for p, _ in items], tf, args.device, args.batch_size)
+
+    os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)
+    n_sub = 0
+    with open(args.output, "w") as f:
+        for (path, extra), prob in zip(items, probs):
+            label = classes[prob.index(max(prob))]
+            n_sub += label == "has_subtitle"
+            rec = {
+                "image": path,
+                "result": {"has_subtitle": label == "has_subtitle", "label": label, "prob": max(prob)},
+                "scores": dict(zip(classes, prob)),
+                **extra,
+            }
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    logger.info("%d results (%d has_subtitle) -> %s", len(items), n_sub, args.output)
+
+
+if __name__ == "__main__":
+    main()
