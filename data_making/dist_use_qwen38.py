@@ -74,9 +74,10 @@ def parse_json(text):
 
 
 class SubtitleClient:
-    def __init__(self, base_url, model, api_key=None, timeout=120, retries=3):
+    def __init__(self, base_url, model, api_key=None, timeout=120, retries=3, prompt=prompt):
         self.url = base_url.rstrip("/") + "/v1/chat/completions"
         self.model = model
+        self.prompt = prompt
         self.headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         self.timeout = timeout
         self.retries = retries
@@ -99,7 +100,7 @@ class SubtitleClient:
                 "role": "user",
                 "content": [
                     {"type": "image_url", "image_url": {"url": data_url}},
-                    {"type": "text", "text": prompt},
+                    {"type": "text", "text": self.prompt},
                 ],
             }],
         }

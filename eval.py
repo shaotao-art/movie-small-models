@@ -109,7 +109,7 @@ def main(argv=None):
         frames = sorted(f for f in os.listdir(frames_dir) if f.startswith("frame_") and f.endswith(".jpg"))
         for name in frames:
             idx = int(name[len("frame_"):-len(".jpg")])
-            items.append((os.path.join(frames_dir, name), {
+            items.append((os.path.abspath(os.path.join(frames_dir, name)), {
                 "source": "video", "video": os.path.abspath(video),
                 "timestamp": (idx - 1) * args.interval,
             }))
