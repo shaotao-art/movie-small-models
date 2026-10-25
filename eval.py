@@ -83,8 +83,17 @@ def main(argv=None):
     cfg = load_config(args.config) if args.config else ckpt_cfg
     if cfg is None:
         parser.error("权重文件里没有训练配置，请用 --config 指定")
-    classes = args.classes.split(",") if args.classes else \
-        ImageFolder(os.path.join(cfg["data"]["root"], "train")).classes
+    if args.classes:
+        classes = args.classes.split(",")
+    else:
+        train_dir = os.path.join(cfg["data"]["root"], "train")
+        if os.path.isdir(train_dir):
+            classes = ImageFolder(train_dir).classes
+        elif cfg["model"]["num_classes"] == 2:  # 推理机上没有训练集时用 build_cls_dataset 的固定类别
+            classes = ["has_subtitle", "no_subtitle"]
+            logger.warning("找不到训练集 %s，使用默认类别 %s（可用 --classes 覆盖）", train_dir, classes)
+        else:
+            parser.error(f"找不到训练集 {train_dir}，请用 --classes 指定类别顺序")
     if len(classes) != cfg["model"]["num_classes"]:
         parser.error(f"{len(classes)} classes {classes} != model.num_classes {cfg['model']['num_classes']}")
 
