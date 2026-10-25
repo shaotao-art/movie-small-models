@@ -5,6 +5,8 @@
     python eval.py --ckpt outputs/resnet18/best.pth --video movie.mp4
     python eval.py --ckpt outputs/resnet18/best.pth --image data/frames/xxx/frame_000001.jpg
     python eval.py --ckpt outputs/resnet18/best.pth --image-list list.txt -o preds.jsonl
+    # 纯权重（tools/export_weights.py 导出）需要 --config
+    python eval.py --ckpt outputs/resnet18/best_weights.pth --config configs/resnet18.yaml --image a.jpg
     # 可组合；抽帧间隔默认 60s
 """
 
@@ -58,8 +60,8 @@ def predict(model, paths, tf, device, batch_size):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--ckpt", required=True, help="训练产出的 best.pth / last.pth")
-    parser.add_argument("--config", default=None, help="不传则用 ckpt 里保存的配置")
+    parser.add_argument("--ckpt", required=True, help="best.pth / last.pth，或导出的 *_weights.pth")
+    parser.add_argument("--config", default=None, help="不传则用 ckpt 里保存的配置；纯权重文件必须传")
     parser.add_argument("--video", action="append", default=[], help="视频路径，可重复")
     parser.add_argument("--image", action="append", default=[], help="单张图片，可重复")
     parser.add_argument("--image-list", action="append", default=[], help="图片列表文件，可重复")
@@ -74,14 +76,20 @@ def main(argv=None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     ckpt = torch.load(args.ckpt, map_location="cpu", weights_only=False)
-    cfg = load_config(args.config) if args.config else ckpt["config"]
+    if isinstance(ckpt, dict) and "model" in ckpt:  # train.py 的 checkpoint
+        state, ckpt_cfg = ckpt["model"], ckpt.get("config")
+    else:  # tools/export_weights.py 导出的纯 state_dict
+        state, ckpt_cfg = ckpt, None
+    cfg = load_config(args.config) if args.config else ckpt_cfg
+    if cfg is None:
+        parser.error("权重文件里没有训练配置，请用 --config 指定")
     classes = args.classes.split(",") if args.classes else \
         ImageFolder(os.path.join(cfg["data"]["root"], "train")).classes
     if len(classes) != cfg["model"]["num_classes"]:
         parser.error(f"{len(classes)} classes {classes} != model.num_classes {cfg['model']['num_classes']}")
 
-    model = build_model(dict(cfg["model"], pretrained=False))  # 权重来自 ckpt，不下载预训练
-    model.load_state_dict(ckpt["model"])
+    model = build_model(dict(cfg["model"], pretrained=False))  # 权重来自文件，不下载预训练
+    model.load_state_dict(state)
     model.to(args.device).eval()
     tf = _transforms(cfg["data"]["image_size"])[1]
 
