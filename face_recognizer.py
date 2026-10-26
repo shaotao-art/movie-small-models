@@ -29,7 +29,7 @@ import config
 
 logging.basicConfig(level=logging.INFO)
 
-# 每线程一套模型实例，见 _load_models
+# 每线程一套模型实例，见 load_models
 _thread_local = threading.local()
 
 
@@ -54,7 +54,7 @@ def ensure_models(model_dir: str = config.FACE_MODEL_DIR) -> tuple[str, str]:
     return paths["detector"], paths["recognizer"]
 
 
-def _load_models(detector_path: str, recognizer_path: str) -> tuple:
+def load_models(detector_path: str, recognizer_path: str) -> tuple:
     """取当前线程的 (detector, recognizer)，没有就建一套
 
     detector.setInputSize 是实例上的可变状态，多个线程共用一个实例会互相覆盖，
@@ -285,7 +285,7 @@ def main():
     args = parser.parse_args()
 
     detector_path, recognizer_path = ensure_models()
-    detector, recognizer = _load_models(detector_path, recognizer_path)
+    detector, recognizer = load_models(detector_path, recognizer_path)
     gallery = build_gallery(config.CHARACTER_REFS, detector, recognizer)
     logging.info(
         "[face_recognizer] gallery: "
@@ -305,7 +305,7 @@ def main():
 
     def run(video_file: str) -> tuple[str, dict]:
         # 线程内首次调用时建一套模型
-        detector, recognizer = _load_models(detector_path, recognizer_path)
+        detector, recognizer = load_models(detector_path, recognizer_path)
         uid = video_file[: -len(".mp4")]
         return uid, identify_clip(
             os.path.join(args.video_root, video_file),

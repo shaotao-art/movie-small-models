@@ -70,10 +70,11 @@ SRT_JSON = "output/tlou_s1e3_srt.json"      # 台词 + 场景片段（含 captio
 
 # 主要人物参考图：值为「单个图片路径」或「路径列表」；换剧/换集时替换
 CHARACTER_REFS = {
-    "乔尔": "test/jole.jpg",
-    "艾莉": "test/ellie.jpg",
-    "比尔": "test/bill.jpg",
-    "弗兰克": "test/frank.jpg",
+    "乔尔": "data/tlou/ref_face/jole.jpg",
+    "艾莉": "data/tlou/ref_face/ellie.jpg",
+    "比尔": "data/tlou/ref_face/bill.jpg",
+    "弗兰克": "data/tlou/ref_face/frank.jpg",
+    "泰丝": "data/tlou/ref_face/tess.png",
 }
 
 # 人脸检测/识别（YuNet + SFace，模型缺失时自动下载）
@@ -91,6 +92,13 @@ FACE_WORKERS = 4             # 并发处理的片段数
 FACES_JSON = "output/tlou_s1e3_faces.json"
 FACE_CROPS_DIR = "output/tlou_s1e3_face_crops"
 
+# 无参考图的全片人脸检测 + 聚类（cluster_faces.py）
+FACE_CLUSTER_DIR = "outputs/face_clusters"
+FACE_CLUSTER_SAMPLE_SECONDS = 1.0  # 抽帧间隔（秒）
+FACE_CLUSTER_THRESH = 0.4          # 与簇中心余弦相似度阈值
+FACE_CLUSTER_MIN_FACES = 3         # 少于该检测数的簇标为 noise
+FACE_CLUSTER_CROPS = 3             # 每个簇保存几张代表脸
+
 # srt / 场景切分
 NO_LINE_TIME_THRES = 5.0              # 超过该时长的字幕间隔算无台词场景
 SCENE_IOF_THRES = 0.8                 # 镜头与无台词场景的重叠度阈值
@@ -106,3 +114,17 @@ VLLM_ENABLE_THINKING = False  # 思考会吃掉 max_tokens，content 可能为�
 # ==================== 阿里云 DashScope ====================
 DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 DASHSCOPE_MODEL = "qwen-plus"  # 需要环境变量 DASHSCOPE_API_KEY
+
+# ==================== 无台词场景标注 + caption（make_scene_captions.py）====================
+SCENE_CAPTION_DIR = "outputs/scene_captions"
+VIDEO_INFO_JSON = "outputs/video_info.json"
+CAPTION_PROMPT = "prompts/prompt_video_caption.txt"
+CAPTION_FONT = "assets/NotoSansSC-Regular.otf"
+CAPTION_FONT_SIZE = 28
+CAPTION_SAMPLE_FPS = 1.0      # 标注/采样的帧率
+CAPTION_BASE_URL = os.getenv("CAPTION_BASE_URL", "http://30.14.1.197:8081")
+CAPTION_API_KEY = os.getenv("CAPTION_API_KEY", "dummy")
+CAPTION_MODEL = os.getenv("CAPTION_MODEL", "qwen35")
+CAPTION_WORKERS = 8           # 并发请求数
+CAPTION_MAX_FRAMES = 8        # 每个片段最多送几张采样帧
+CAPTION_MAX_TOKENS = 512

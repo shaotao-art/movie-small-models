@@ -65,6 +65,14 @@ def split_video_into_scenes(
     return scene_list
 
 
+def _frame_and_time(tc) -> tuple[int, float]:
+    """兼容旧版 scenedetect 生成的 pkl：旧对象把 frame_num/framerate 直接存在 __dict__。"""
+    state = getattr(tc, "__dict__", {})
+    if "frame_num" in state:
+        return state["frame_num"], state["frame_num"] / state["framerate"]
+    return tc.frame_num, tc.get_seconds()
+
+
 def load_scene_det_res(pkl_path: str) -> list[dict]:
     """读取场景 pkl，整理成统一的 dict 列表
 
@@ -73,12 +81,14 @@ def load_scene_det_res(pkl_path: str) -> list[dict]:
     """
     scene_det_res = []
     for start, end in load_from_pickle(pkl_path):
+        start_frame, start_time = _frame_and_time(start)
+        end_frame, end_time = _frame_and_time(end)
         scene_det_res.append(
             {
-                "start_frame": start.frame_num,
-                "end_frame": end.frame_num,
-                "start_time": start.get_seconds(),
-                "end_time": end.get_seconds(),
+                "start_frame": start_frame,
+                "end_frame": end_frame,
+                "start_time": start_time,
+                "end_time": end_time,
             }
         )
     return scene_det_res
