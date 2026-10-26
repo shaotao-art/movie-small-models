@@ -17,7 +17,7 @@ from utils import evaluate, load_config, seed_everything, setup_logging, train_o
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", default="config.yaml")
+    parser.add_argument("--config", required=True)
     args = parser.parse_args()
     cfg = load_config(args.config)
 

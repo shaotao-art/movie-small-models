@@ -2,10 +2,10 @@
 # 依次跑 configs/ 下所有模型实验（template.yaml 除外）
 #
 # 用法:
-#   bash run_all_experiments.sh
-#   TRAIN_CMD="torchrun --nproc_per_node=4 train.py" bash run_all_experiments.sh
+#   bash scripts/run_all_experiments.sh
+#   TRAIN_CMD="torchrun --nproc_per_node=4 train.py" bash scripts/run_all_experiments.sh
 set -euo pipefail
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 TRAIN_CMD="${TRAIN_CMD:-python train.py}"
 
 for cfg in \

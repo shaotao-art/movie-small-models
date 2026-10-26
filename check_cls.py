@@ -3,7 +3,7 @@
 
 用法:
     python check_cls.py
-    python check_cls.py --config config_mobilenet.yaml --batches 5
+    python check_cls.py --config configs/resnet18.yaml --batches 5
 """
 
 import argparse
@@ -22,14 +22,16 @@ logger = logging.getLogger("check")
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--config", default="config_mobilenet.yaml")
+    parser.add_argument("--config", default="configs/resnet18.yaml")
     parser.add_argument("--batches", type=int, default=3, help="测几个训练 batch")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     cfg = load_config(args.config)
 
-    train_loader, val_loader, _ = build_dataloaders(cfg["data"])
+    train_loader, val_loader, _ = build_dataloaders(
+        dict(cfg["data"], batch_size=cfg["train"]["global_batch_size"])
+    )
     logger.info("classes (index order): %s", train_loader.dataset.classes)
     logger.info("train=%d val=%d", len(train_loader.dataset), len(val_loader.dataset))
 

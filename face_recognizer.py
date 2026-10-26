@@ -9,14 +9,13 @@ key 与其它流水线的片段 uid 一致（整段场景为 scene_0000），并
 裁剪图存到 config.FACE_CROPS_DIR，方便人工核对判定对错。
 
 用法:
-    python -m src.face_recognizer --check          # 只检查参考图能否建出 gallery
-    python -m src.face_recognizer --limit 5        # 先跑 5 个片段看看
-    python -m src.face_recognizer --workers 4      # 跑 config.SCENES_DIR 下所有整段场景
+    python face_recognizer.py --check          # 只检查参考图能否建出 gallery
+    python face_recognizer.py --limit 5        # 先跑 5 个片段看看
+    python face_recognizer.py --workers 4      # 跑 config.SCENES_DIR 下所有整段场景
 """
 import argparse
 import logging
 import os
-import sys
 import threading
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -25,16 +24,19 @@ import cv2
 import numpy as np
 from tqdm import tqdm
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from common_utils.file_utils import save_image, save_json
-from src.make_video_caption import list_video_clips
 import config
 
 logging.basicConfig(level=logging.INFO)
 
 # 每线程一套模型实例，见 _load_models
 _thread_local = threading.local()
+
+
+def list_video_clips(video_root: str, include_sub: bool = False) -> list[str]:
+    """列出片段目录下的 mp4；默认跳过 cut_videos 产出的 _sub_ 子镜头。"""
+    clips = sorted(f for f in os.listdir(video_root) if f.endswith(".mp4"))
+    return clips if include_sub else [f for f in clips if "_sub_" not in f]
 
 
 def ensure_models(model_dir: str = config.FACE_MODEL_DIR) -> tuple[str, str]:

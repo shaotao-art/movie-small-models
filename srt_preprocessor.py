@@ -7,7 +7,19 @@ from dataclasses import asdict, dataclass, field
 import config
 from common_utils.file_utils import load_json, save_json
 from common_utils.time_utils import timecode_to_second, time_iof
-from src.collect_captions import collect_captions
+
+
+def collect_captions(caption_dir: str) -> dict[str, str]:
+    """把目录下每个片段的 json 汇总成 {uid: caption}；uid 缺省用文件名。"""
+    uid2caption = {}
+    for name in sorted(os.listdir(caption_dir)):
+        if not name.endswith(".json"):
+            continue
+        data = load_json(os.path.join(caption_dir, name))
+        caption = (data.get("caption") or "").strip()
+        if caption:
+            uid2caption[data.get("uid") or os.path.splitext(name)[0]] = caption
+    return uid2caption
 
 
 @dataclass
@@ -195,7 +207,7 @@ class SrtProcesser:
         logging.warning(f"[SrtProcesser] cannot find line at time {time}")
         return None
 
-    def get_lines_by_time(self, start_time: float, end_time: float) -> str:
+    def get_lines_by_time(self, start_time: float, end_time: float) -> list[SrtClip]:
         """Get the lines from start_time to end_time (inclusive)"""
         assert 0 <= start_time <= end_time <= self.total_duration, "Invalid time"
         res = []
@@ -276,8 +288,8 @@ class SrtProcesser:
 
 if __name__ == "__main__":
     # 跑一遍完整流程并导出：台词 + 无台词场景 + scene detect 切片 + 画面描述
-    # python -m src.srt_preprocessor
-    from src.split_video import load_scene_det_res
+    # python srt_preprocessor.py
+    from scene_det import load_scene_det_res
 
     srt = SrtProcesser(config.SRT_PATH)
     srt.get_no_line_scenes()

@@ -4,7 +4,7 @@
 VLM 描述，所有 scene 片段都会被切成「子镜头」和「完整场景」两份。
 
 用法:
-    python -m src.cut_videos \
+    python cut_videos.py \
         --video data/tlou/最后生还者第03集.mp4 \
         --srt data/tlou/ep3.srt \
         --scenes-pkl data/tlou/tlou_scenes.pkl \
@@ -13,14 +13,11 @@ VLM 描述，所有 scene 片段都会被切成「子镜头」和「完整场景
 import argparse
 import logging
 import os
-import sys
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from src.srt_preprocessor import SrtProcesser
-from src.split_video import load_scene_det_res
+from srt_preprocessor import SrtProcesser
+from scene_det import load_scene_det_res
 import config
-from src.video_processor import VideoProcessor
+from video_processor import VideoProcessor
 
 logging.basicConfig(level=logging.INFO)
 

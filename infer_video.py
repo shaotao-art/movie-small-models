@@ -20,8 +20,8 @@ from PIL import Image
 from torch.utils.data import DataLoader
 
 from config import (
-    SFT_PROMPT, VLM_API_KEY, VLM_BASE_URL, VLM_BATCH_SIZE, VLM_OUTPUT_SUFFIX,
-    VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
+    DECODE_WORKERS, PREFETCH_FACTOR, SFT_PROMPT, VLM_API_KEY, VLM_BASE_URL,
+    VLM_BATCH_SIZE, VLM_OUTPUT_SUFFIX, VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
 )
 from data_making.dist_use_qwen38 import SubtitleClient, resolve_model
 from eval_video import VideoBatchDataset
@@ -41,8 +41,7 @@ def read_frames(path):
                 continue
             video, idx = rec.get("video"), rec.get("frame_index")
             if video is None or idx is None:
-                logger.warning("skip record without video/frame_index: %s", rec.get("image"))
-                continue
+                raise ValueError(f"{path} 不是 eval_video.py 的输出（记录缺少 video/frame_index）")
             groups.setdefault(video, {})[idx] = rec
     return groups
 
@@ -79,7 +78,11 @@ def main(argv=None):
     api_key = args.api_key or VLM_API_KEY
     output = args.output or os.path.splitext(args.eval_jsonl)[0] + VLM_OUTPUT_SUFFIX
 
-    groups = read_frames(args.eval_jsonl)
+    try:
+        groups = read_frames(args.eval_jsonl)
+    except ValueError as e:
+        logger.error("%s", e)
+        return 1
     done = read_done(output)
     groups = {v: {i: r for i, r in recs.items() if (v, i) not in done} for v, recs in groups.items()}
     groups = {v: recs for v, recs in groups.items() if recs}
@@ -103,7 +106,7 @@ def main(argv=None):
             logger.info("decoding %s (%d frames)", video, len(recs))
             loader = DataLoader(
                 VideoBatchDataset(video, args.batch_size, indices=sorted(recs)),
-                batch_size=None, num_workers=1, prefetch_factor=2,
+                batch_size=None, num_workers=DECODE_WORKERS, prefetch_factor=PREFETCH_FACTOR,
             )
             it = iter(loader)
             while True:

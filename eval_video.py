@@ -48,7 +48,9 @@ class VideoBatchDataset(IterableDataset):
         cap = cv2.VideoCapture(self.video)  # 在 worker 内初始化，避免多进程冲突
         if not cap.isOpened():
             raise RuntimeError(f"cannot open video {self.video}")
-        fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        if not fps or not np.isfinite(fps) or fps <= 0:  # 坏元数据时退化为 25fps
+            fps = 25.0
         step = max(1, round(fps * self.interval))
         wanted = set(self.indices) if self.indices is not None else None
 

@@ -1,15 +1,12 @@
 """镜头切分：用 PySceneDetect 检测镜头边界，结果存成 pickle 供后续流程使用。
 
 用法:
-    python -m src.split_video --video data/tlou/最后生还者第03集.mp4
+    python scene_det.py --video data/tlou/最后生还者第03集.mp4
     # 顺带把每个镜头切出来（会在视频目录下产生大量 mp4 片段）
-    python -m src.split_video --video data/tlou/最后生还者第03集.mp4 --split-clips
+    python scene_det.py --video data/tlou/最后生还者第03集.mp4 --split-clips
 """
 import argparse
 import os
-import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from scenedetect import open_video, SceneManager, split_video_ffmpeg
 from scenedetect.detectors import ContentDetector

@@ -18,7 +18,7 @@ from config import ALL_IMAGES_JSONL, SFT_JSONL, SFT_PROMPT
 
 def image_path(path):
     """jsonl 里记录的是旧路径 frames/；frames 挪到 data/ 后自动兼容。"""
-    if not os.path.isabs(path) and not path.startswith("data" + os.sep):
+    if path.startswith("frames" + os.sep):
         path = os.path.join("data", path)
     return os.path.abspath(path)
 

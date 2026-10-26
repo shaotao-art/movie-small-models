@@ -1,10 +1,11 @@
 import os
 
-from config import IMAGENET_MEAN, IMAGENET_STD, RESIZE_RATIO
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
+
+from config import IMAGENET_MEAN, IMAGENET_STD, RESIZE_RATIO
 
 
 def _transforms(image_size):
