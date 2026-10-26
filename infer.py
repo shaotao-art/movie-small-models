@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-"""用部署好的 SFT VLM 对 eval.py 的视频结果逐帧提取字幕。
+"""用部署好的 SFT VLM 对 eval.py 的图片结果逐张提取字幕。
 
-输入是 eval.py 输出的 jsonl，只处理判为有字幕的帧；输出每行保留 video / timestamp，
-便于按时间聚合。重跑会跳过已完成的图片（断点续跑）。
+输入是 eval.py 输出的 jsonl，只处理判为有字幕的图片。重跑会跳过已完成的图片（断点续跑）。
+视频请用 infer_video.py。
 
 用法:
-    python infer.py outputs/movie_eval.jsonl --base-url http://127.0.0.1:8080
-    python infer.py outputs/movie_eval.jsonl -o outputs/movie_vlm.jsonl -w 16
+    python infer.py outputs/eval_results.jsonl --base-url http://127.0.0.1:8080
+    python infer.py outputs/eval_results.jsonl -o outputs/eval_vlm.jsonl -w 16
 """
 
 import argparse
@@ -24,7 +24,7 @@ logger = logging.getLogger("infer")
 
 
 def read_frames(path):
-    """eval.py 输出里判为有字幕的帧。"""
+    """eval.py 输出里判为有字幕的图片。"""
     frames = []
     with open(path) as f:
         for line in f:
@@ -45,7 +45,7 @@ def resolve(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("eval_jsonl", help="eval.py 输出的 jsonl（视频输入）")
+    parser.add_argument("eval_jsonl", help="eval.py 输出的 jsonl（图片输入）")
     parser.add_argument("-o", "--output", default=None, help="默认 <eval_jsonl 同名>_vlm.jsonl")
     parser.add_argument("--base-url", default=os.environ.get("VLM_BASE_URL", "http://127.0.0.1:8080"),
                         help="已部署 VLM 的服务地址")
@@ -93,8 +93,6 @@ def main(argv=None):
                 continue
             fout.write(json.dumps({
                 "image": src["image"],
-                "video": src.get("video"),
-                "timestamp": src.get("timestamp"),
                 "result": res["result"],
                 "raw": res["raw"],
             }, ensure_ascii=False) + "\n")

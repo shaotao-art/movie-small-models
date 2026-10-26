@@ -30,16 +30,20 @@ logger = logging.getLogger("qwen")
 MAX_SIDE = 896
 
 
-def encode_image(image_path, max_side=MAX_SIDE):
+def encode_pil(im, max_side=MAX_SIDE):
     """长边缩放到 max_side 后编码为 base64 JPEG，减少上传体积和视觉 token。"""
-    with Image.open(image_path) as im:
-        im = im.convert("RGB")
-        scale = max_side / max(im.size)
-        size = (round(im.width * scale), round(im.height * scale))
-        im = im.resize(size, Image.Resampling.LANCZOS)
+    im = im.convert("RGB")
+    scale = max_side / max(im.size)
+    size = (round(im.width * scale), round(im.height * scale))
+    im = im.resize(size, Image.Resampling.LANCZOS)
     buf = io.BytesIO()
     im.save(buf, format="JPEG", quality=95)
     return base64.b64encode(buf.getvalue()).decode()
+
+
+def encode_image(image_path, max_side=MAX_SIDE):
+    with Image.open(image_path) as im:
+        return encode_pil(im, max_side)
 
 prompt = """提取下面电影截图中的字幕
 
@@ -90,7 +94,13 @@ class SubtitleClient:
         return self._local.session
 
     def __call__(self, image_path):
-        data_url = f"data:image/jpeg;base64,{encode_image(image_path)}"
+        with Image.open(image_path) as im:
+            image = im.convert("RGB")
+        return self.predict(image, image_path)
+
+    def predict(self, image, name):
+        """image 为 PIL 图；name 用于日志和返回记录。"""
+        data_url = f"data:image/jpeg;base64,{encode_pil(image)}"
 
         payload = {
             "model": self.model,
@@ -117,14 +127,14 @@ class SubtitleClient:
                     content = "".join(part.get("text", "") for part in content)
                 parsed = parse_json(content)
                 if parsed is None:
-                    logger.warning("unparsable output for %s: %r", image_path, content[:200])
-                return {"image": image_path, "result": parsed, "raw": content}
+                    logger.warning("unparsable output for %s: %r", name, content[:200])
+                return {"image": name, "result": parsed, "raw": content}
             except Exception as e:  # 网络错误/超时/5xx 都重试
                 last_error = e
                 if attempt < self.retries:
-                    logger.warning("attempt %d/%d failed for %s: %s", attempt, self.retries, image_path, e)
+                    logger.warning("attempt %d/%d failed for %s: %s", attempt, self.retries, name, e)
                     time.sleep(2 ** attempt)
-        raise RuntimeError(f"{image_path}: {last_error}")
+        raise RuntimeError(f"{name}: {last_error}")
 
 
 def resolve_model(base_url, api_key):
