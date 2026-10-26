@@ -20,7 +20,6 @@ import time
 import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
 from torch.utils.data import DataLoader, IterableDataset
 
 from config import (
@@ -36,13 +35,15 @@ class VideoBatchDataset(IterableDataset):
     """在 worker 进程里解码并切好 batch。
 
     默认按 interval 抽帧；传 indices 时只取这些帧（infer_video 用来只解码预测有字幕的帧）。
+    给了 image_size 就在 worker 里缩放/裁剪（跨进程只传小图，避免吃满 /dev/shm）。
     """
 
-    def __init__(self, video, batch_size=64, interval=60.0, indices=None):
+    def __init__(self, video, batch_size=64, interval=60.0, indices=None, image_size=None):
         self.video = video
         self.batch_size = batch_size
         self.interval = interval
         self.indices = indices
+        self.image_size = image_size
 
     def __iter__(self):
         cap = cv2.VideoCapture(self.video)  # 在 worker 内初始化，避免多进程冲突
@@ -62,6 +63,8 @@ class VideoBatchDataset(IterableDataset):
                     ok, frame = cap.retrieve()
                     if not ok:
                         break
+                    if self.image_size:
+                        frame = self._resize(frame, self.image_size)
                     frames.append(frame[:, :, ::-1].copy())  # BGR -> RGB
                     indices.append(idx)
                     if len(frames) == self.batch_size:
@@ -74,6 +77,17 @@ class VideoBatchDataset(IterableDataset):
             yield self._batch(frames, indices, fps)
 
     @staticmethod
+    def _resize(frame, image_size):
+        """等价于 val 变换的 Resize(int(size*1.14)) + CenterCrop(size)。"""
+        h, w = frame.shape[:2]
+        scale = int(image_size * RESIZE_RATIO) / min(h, w)
+        nw, nh = round(w * scale), round(h * scale)
+        interp = cv2.INTER_AREA if scale < 1 else cv2.INTER_LINEAR
+        frame = cv2.resize(frame, (nw, nh), interpolation=interp)
+        top, left = (nh - image_size) // 2, (nw - image_size) // 2
+        return frame[top:top + image_size, left:left + image_size]
+
+    @staticmethod
     def _batch(frames, indices, fps):
         images = torch.from_numpy(np.stack(frames)).permute(0, 3, 1, 2)  # B,C,H,W uint8
         return {
@@ -83,15 +97,9 @@ class VideoBatchDataset(IterableDataset):
         }
 
 
-def preprocess(frames, image_size, device):
-    """GPU 上做 Resize(int(size*1.14)) + CenterCrop + Normalize，等价于 data.py 的 val 变换。"""
+def preprocess(frames, device):
+    """uint8 B,C,H,W -> ImageNet 归一化；缩放裁剪已在 worker 里完成。"""
     x = frames.to(device, non_blocking=True).float().div_(255.0)
-    h, w = x.shape[-2:]
-    scale = int(image_size * RESIZE_RATIO) / min(h, w)
-    x = F.interpolate(x, size=(round(h * scale), round(w * scale)), mode="bilinear", antialias=True)
-    top = (x.shape[-2] - image_size) // 2
-    left = (x.shape[-1] - image_size) // 2
-    x = x[:, :, top:top + image_size, left:left + image_size]
     mean = torch.tensor(IMAGENET_MEAN, device=device).view(1, -1, 1, 1)
     std = torch.tensor(IMAGENET_STD, device=device).view(1, -1, 1, 1)
     return (x - mean) / std
@@ -121,7 +129,7 @@ def main(argv=None):
     model.to(device).eval()
     image_size = cfg["data"]["image_size"]
 
-    dataset = VideoBatchDataset(args.video, args.batch_size, args.interval)
+    dataset = VideoBatchDataset(args.video, args.batch_size, args.interval, image_size=image_size)
     loader = DataLoader(
         dataset, batch_size=None, num_workers=args.workers,
         pin_memory=device.type == "cuda",
@@ -135,7 +143,7 @@ def main(argv=None):
     started = time.time()
     with open(args.output, "w") as f, torch.inference_mode():
         for batch in loader:
-            x = preprocess(batch["images"], image_size, device)
+            x = preprocess(batch["images"], device)
             with torch.autocast(device_type=device.type, enabled=amp):
                 probs = model(x).softmax(1).float().cpu().tolist()
             for idx, ts, prob in zip(batch["indices"].tolist(), batch["timestamps"].tolist(), probs):

@@ -20,8 +20,8 @@ from PIL import Image
 from torch.utils.data import DataLoader
 
 from config import (
-    DECODE_WORKERS, PREFETCH_FACTOR, SFT_PROMPT, VLM_API_KEY, VLM_BASE_URL,
-    VLM_BATCH_SIZE, VLM_OUTPUT_SUFFIX, VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
+    SFT_PROMPT, VLM_API_KEY, VLM_BASE_URL, VLM_BATCH_SIZE, VLM_OUTPUT_SUFFIX,
+    VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
 )
 from data_making.dist_use_qwen38 import SubtitleClient, resolve_model
 from eval_video import VideoBatchDataset
@@ -106,7 +106,9 @@ def main(argv=None):
             logger.info("decoding %s (%d frames)", video, len(recs))
             loader = DataLoader(
                 VideoBatchDataset(video, args.batch_size, indices=sorted(recs)),
-                batch_size=None, num_workers=DECODE_WORKERS, prefetch_factor=PREFETCH_FACTOR,
+                # 这里要全分辨率帧给 VLM，跨进程传 1080p 一批会吃满 /dev/shm；
+                # 在主进程解码，瓶颈本来也是 VLM 请求
+                batch_size=None, num_workers=0,
             )
             it = iter(loader)
             while True:

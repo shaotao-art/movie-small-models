@@ -28,7 +28,7 @@ DECODE_WORKERS = 1           # DataLoader 解码进程数
 PREFETCH_FACTOR = 2          # 每个解码进程预取批数
 
 # 已部署的 SFT VLM（字幕提取，OpenAI 兼容接口）
-VLM_BASE_URL = os.environ.get("VLM_BASE_URL", "http://127.0.0.1:8080")
+VLM_BASE_URL = os.environ.get("VLM_BASE_URL", "http://30.14.1.197:8080")
 VLM_API_KEY = os.environ.get("AIO_API_KEY", "dummy")
 VLM_WORKERS = 16
 VLM_TIMEOUT = 120.0
@@ -43,10 +43,24 @@ SFT_PROMPT = (
     '{"has_subtitle": true, "subtitle_cn": "...", "subtitle_en": "..."}'
 )
 
+# 整片字幕分析（analyze_video.py：分类 + 提取）
+ANALYZE_CKPT = "ckp-tag/best_weights_cls_mobilenet_v3.pth"
+ANALYZE_CONFIG = "configs/mobilenet_v3_small.yaml"  # 纯权重文件需要配套配置
+ANALYZE_OUTPUT_DIR = "outputs/analyze"
+ANALYZE_TEST_DIR = "outputs/analyze_test"
+ANALYZE_INTERVAL = 0.1        # 抽帧间隔（秒）
+ANALYZE_TEST_SECONDS = 120.0  # 测试片段时长（秒）
+
+# 字幕文件生成（make_srt.py：合并 VLM 抖动）
+SRT_MERGE_SIMILARITY = 0.75   # 相邻帧文本相似度阈值（去标点/空格后比较）
+SRT_MERGE_MAX_GAP = 0.5       # 相邻字幕帧最大间隔（秒），超过就断开
+SRT_MERGE_SAME_GAP = 1.0      # 同一句字幕中间漏采时的重连间隔（秒）
+SRT_MERGE_MIN_DURATION = 0.3  # 单条字幕最短时长（秒）
+
 # ==================== 视频理解流水线 ====================
 # 输入（本地剧集，按需替换）
-VIDEO_PATH = "data/tlou/最后生还者第03集.mp4"
-SRT_PATH = "data/tlou/ep3.srt"
+VIDEO_PATH = "data/tlou/tlou_s1e3.mp4"
+SRT_PATH = "data/tlou/tlou_s1e3.srt"
 SCENES_PKL = "data/tlou/tlou_scenes.pkl"  # scene_det.py 产出的镜头列表
 
 # 输出
