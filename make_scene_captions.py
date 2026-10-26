@@ -209,6 +209,8 @@ def parse_caption(text: str) -> dict:
 
 def caption_clip(clip: dict, prompt: str, client: OpenAI) -> dict:
     frames = sorted(glob.glob(os.path.join(clip["dir"], "frame_*.jpg")))
+    if not frames:
+        raise RuntimeError(f"{clip['uid']}: 没有标注帧，先跑标注")
     if len(frames) > CAPTION_MAX_FRAMES:
         idxs = sorted(set(np.linspace(0, len(frames) - 1, CAPTION_MAX_FRAMES).round().astype(int)))
         frames = [frames[i] for i in idxs]
@@ -270,9 +272,6 @@ def main(argv=None):
             clip["caption"] = data.get("caption")
             clip["characters"] = data.get("characters", [])
         clip["needs_annotation"] = not clip["caption"] and not frames_ready(clip["dir"], len(clip["samples"]))
-    logger.info("片段 %d 个，需标注 %d 个，需 caption %d 个",
-                len(clips), sum(c["needs_annotation"] for c in clips),
-                sum(not c["caption"] for c in clips))
 
     n_annot = sum(c["needs_annotation"] for c in clips)
     n_samples = sum(len(c["samples"]) for c in clips if c["needs_annotation"])
@@ -328,19 +327,32 @@ def main(argv=None):
         logger.info("[3/3] 跳过 caption")
 
     out = os.path.join(args.output_dir, "captions.jsonl")
+    records = {}
+    if os.path.exists(out):  # 保留其它片段的已有结果，--uid/--limit 局部重跑不覆盖全量
+        with open(out) as f:
+            for line in f:
+                if line.strip():
+                    rec = json.loads(line)
+                    records[rec["uid"]] = rec
+    for clip in clips:
+        new = {
+            "uid": clip["uid"],
+            "scene_uid": clip["scene_uid"],
+            "start": clip["start"],
+            "end": clip["end"],
+            "duration": clip["duration"],
+            "characters": clip["characters"],
+            "caption": clip["caption"],
+        }
+        if new["caption"] or clip["uid"] not in records:
+            records[clip["uid"]] = new
     with open(out, "w") as f:
-        for clip in clips:
-            f.write(json.dumps({
-                "uid": clip["uid"],
-                "scene_uid": clip["scene_uid"],
-                "start": clip["start"],
-                "end": clip["end"],
-                "duration": clip["duration"],
-                "characters": clip["characters"],
-                "caption": clip["caption"],
-            }, ensure_ascii=False) + "\n")
+        for rec in sorted(records.values(), key=lambda r: r.get("start", 0)):
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     done = sum(bool(c["caption"]) for c in clips)
     print(f"{done}/{len(clips)} 个片段有 caption -> {out}（总用时 {time.time() - started:.0f}s）")
+    if args.no_caption:
+        return 0
     return 0 if done == len(clips) else 1
 
 

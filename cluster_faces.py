@@ -56,6 +56,13 @@ def unit(vec: np.ndarray) -> np.ndarray:
     return vec / norm if norm else vec
 
 
+def add_crop(entry: dict, score: float, crop: np.ndarray, keep: int) -> None:
+    """每簇只保留分数最高的 keep 张，避免把几千张 112x112 人脸全存内存。"""
+    entry["crops"].append((score, crop))
+    entry["crops"].sort(key=lambda item: -item[0])
+    del entry["crops"][keep:]
+
+
 def merge_clusters(clusters: dict, alias: dict, threshold: float) -> None:
     """质心相似度超过阈值的簇合并；记录被并入的 uid，便于回填标签。"""
     uids = list(clusters)
@@ -144,7 +151,7 @@ def main(argv=None):
                         ent["n"] += 1
                         ent["first"] = min(ent["first"], ts)
                         ent["last"] = max(ent["last"], ts)
-                        ent["crops"].append((quality, aligned))
+                        add_crop(ent, quality, aligned, args.crops)
                         record.update(person=name, match=round(float(match), 3))
                     else:
                         uid, best = None, -1.0
@@ -162,7 +169,7 @@ def main(argv=None):
                         c["n"] += 1
                         c["first"] = min(c["first"], ts)
                         c["last"] = max(c["last"], ts)
-                        c["crops"].append((quality, aligned))
+                        add_crop(c, quality, aligned, args.crops)
                         record.update(person=uid)
                     records.append(record)
                     n_faces += 1
@@ -170,7 +177,7 @@ def main(argv=None):
             idx += 1
     cap.release()
 
-    merge_clusters(clusters, alias, args.merge_thresh or args.thresh)
+    merge_clusters(clusters, alias, args.merge_thresh if args.merge_thresh is not None else args.thresh)
     ordered = sorted(clusters.items(), key=lambda kv: -kv[1]["n"])
     kept = [uid for uid, c in ordered if c["n"] >= args.min_faces]
     labels = {uid: f"person_{rank:02d}" for rank, uid in enumerate(kept)}

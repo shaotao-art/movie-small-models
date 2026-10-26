@@ -18,7 +18,7 @@ def read_image(image_path: str) -> np.ndarray:
 
 def save_image(img: np.ndarray, save_path: str):
     dir_name = os.path.dirname(save_path)
-    if not os.path.exists(dir_name):
+    if dir_name and not os.path.exists(dir_name):
         os.makedirs(dir_name, exist_ok=True)
     img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     cv2.imwrite(save_path, img)

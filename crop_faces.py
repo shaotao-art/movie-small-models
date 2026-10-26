@@ -13,6 +13,7 @@
 import argparse
 import json
 import os
+import re
 
 import cv2
 from tqdm import tqdm
@@ -50,9 +51,10 @@ def main(argv=None):
 
     out_dir = args.output or os.path.join(args.input, f"{args.person}_crops")
     os.makedirs(out_dir, exist_ok=True)
-    for name in os.listdir(out_dir):  # 清掉上一次导出的图，避免编号错位留下旧文件
-        if name.endswith(".jpg"):
-            os.remove(os.path.join(out_dir, name))
+    if not args.limit:  # 全量导出前清掉旧图，避免编号错位留下旧文件；--limit 不动已有结果
+        for name in os.listdir(out_dir):
+            if re.fullmatch(r"\d{4}_.*\.jpg", name):
+                os.remove(os.path.join(out_dir, name))
 
     cap = cv2.VideoCapture(video)
     if not cap.isOpened():
@@ -75,11 +77,11 @@ def main(argv=None):
                         x1, y1 = min(frame.shape[1], x + w), min(frame.shape[0], y + h)
                         crop = frame[y0:y1, x0:x1]
                         if crop.size:
-                            saved += 1
                             suffix = f"_{j}" if len(recs) > 1 else ""
-                            name = f"{saved:04d}_t{rec['timestamp']:08.2f}_f{idx:06d}{suffix}.jpg"
-                            cv2.imwrite(os.path.join(out_dir, name), crop)
-                            bar.update(1)
+                            name = f"{saved + 1:04d}_t{rec['timestamp']:08.2f}_f{idx:06d}{suffix}.jpg"
+                            if cv2.imwrite(os.path.join(out_dir, name), crop):
+                                saved += 1
+                                bar.update(1)
             idx += 1
     cap.release()
 
