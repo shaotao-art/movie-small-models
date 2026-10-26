@@ -5,7 +5,7 @@
 主线程把帧并发送给 VLM。重跑会跳过已完成的 (video, frame_index)。
 
 用法:
-    python infer_video.py outputs/movie_eval.jsonl --base-url http://127.0.0.1:8000
+    python infer_video.py outputs/movie_eval.jsonl --base-url http://127.0.0.1:8080
     python infer_video.py outputs/movie_eval.jsonl -o outputs/movie_vlm.jsonl -w 16 --batch-size 16
 """
 
@@ -19,8 +19,11 @@ from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
 from torch.utils.data import DataLoader
 
+from config import (
+    SFT_PROMPT, VLM_API_KEY, VLM_BASE_URL, VLM_BATCH_SIZE, VLM_OUTPUT_SUFFIX,
+    VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
+)
 from data_making.dist_use_qwen38 import SubtitleClient, resolve_model
-from data_making.make_sft_jsonl import PROMPT
 from eval_video import VideoBatchDataset
 
 logger = logging.getLogger("infer_video")
@@ -62,20 +65,19 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("eval_jsonl", help="eval_video.py 输出的 jsonl")
     parser.add_argument("-o", "--output", default=None, help="默认 <eval_jsonl 同名>_vlm.jsonl")
-    parser.add_argument("--base-url", default=os.environ.get("VLM_BASE_URL", "http://127.0.0.1:8000"),
-                        help="已部署 VLM 的服务地址")
+    parser.add_argument("--base-url", default=VLM_BASE_URL, help="已部署 VLM 的服务地址")
     parser.add_argument("--model", default=None, help="模型名，默认从 /v1/models 自动获取")
-    parser.add_argument("--api-key", default=None, help="默认 dummy；也可用环境变量 AIO_API_KEY")
-    parser.add_argument("-w", "--workers", type=int, default=16, help="并发请求数，默认 16")
-    parser.add_argument("--batch-size", type=int, default=16, help="解码批大小，默认 16（4K 帧别开太大）")
-    parser.add_argument("--timeout", type=float, default=120, help="单请求超时秒数")
-    parser.add_argument("--retries", type=int, default=3, help="失败重试次数")
+    parser.add_argument("--api-key", default=None, help="默认取 VLM_API_KEY；也可用环境变量 AIO_API_KEY")
+    parser.add_argument("-w", "--workers", type=int, default=VLM_WORKERS, help="并发请求数")
+    parser.add_argument("--batch-size", type=int, default=VLM_BATCH_SIZE, help="解码批大小（4K 帧别开太大）")
+    parser.add_argument("--timeout", type=float, default=VLM_TIMEOUT, help="单请求超时秒数")
+    parser.add_argument("--retries", type=int, default=VLM_RETRIES, help="失败重试次数")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    api_key = args.api_key or os.environ.get("AIO_API_KEY") or "dummy"
-    output = args.output or os.path.splitext(args.eval_jsonl)[0] + "_vlm.jsonl"
+    api_key = args.api_key or VLM_API_KEY
+    output = args.output or os.path.splitext(args.eval_jsonl)[0] + VLM_OUTPUT_SUFFIX
 
     groups = read_frames(args.eval_jsonl)
     done = read_done(output)
@@ -93,7 +95,7 @@ def main(argv=None):
         return 1
     logger.info("model=%s", model)
 
-    client = SubtitleClient(args.base_url, model, api_key, args.timeout, args.retries, prompt=PROMPT)
+    client = SubtitleClient(args.base_url, model, api_key, args.timeout, args.retries, prompt=SFT_PROMPT)
     ok = failed = 0
     started = time.time()
     with open(output, "a") as fout, ThreadPoolExecutor(max_workers=args.workers) as pool:

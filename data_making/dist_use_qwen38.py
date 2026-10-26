@@ -18,6 +18,7 @@ import json
 import logging
 import os
 import re
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -25,12 +26,14 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from PIL import Image
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config import VLM_API_KEY, VLM_BASE_URL, VLM_MAX_SIDE, VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS
+
 logger = logging.getLogger("qwen")
 
-MAX_SIDE = 896
 
-
-def encode_pil(im, max_side=MAX_SIDE):
+def encode_pil(im, max_side=VLM_MAX_SIDE):
     """长边缩放到 max_side 后编码为 base64 JPEG，减少上传体积和视觉 token。"""
     im = im.convert("RGB")
     scale = max_side / max(im.size)
@@ -41,7 +44,7 @@ def encode_pil(im, max_side=MAX_SIDE):
     return base64.b64encode(buf.getvalue()).decode()
 
 
-def encode_image(image_path, max_side=MAX_SIDE):
+def encode_image(image_path, max_side=VLM_MAX_SIDE):
     with Image.open(image_path) as im:
         return encode_pil(im, max_side)
 
@@ -169,17 +172,17 @@ def main(argv=None):
     )
     parser.add_argument("image_list", help="图片路径列表文件")
     parser.add_argument("-o", "--output", default=None, help="输出 jsonl，默认与 image_list 同名的 .jsonl")
-    parser.add_argument("--base-url", default="http://30.14.1.197:8080", help="模型服务地址")
+    parser.add_argument("--base-url", default=VLM_BASE_URL, help="模型服务地址")
     parser.add_argument("--model", default=None, help="模型名，默认从 /v1/models 自动获取")
-    parser.add_argument("--api-key", default=None, help="API key，默认 dummy；也可用环境变量 AIO_API_KEY")
-    parser.add_argument("-w", "--workers", type=int, default=16, help="并发线程数，默认 16")
-    parser.add_argument("--timeout", type=float, default=120, help="单请求超时秒数")
-    parser.add_argument("--retries", type=int, default=3, help="失败重试次数")
+    parser.add_argument("--api-key", default=None, help="API key，默认取 VLM_API_KEY；也可用环境变量 AIO_API_KEY")
+    parser.add_argument("-w", "--workers", type=int, default=VLM_WORKERS, help="并发线程数")
+    parser.add_argument("--timeout", type=float, default=VLM_TIMEOUT, help="单请求超时秒数")
+    parser.add_argument("--retries", type=int, default=VLM_RETRIES, help="失败重试次数")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
-    api_key = args.api_key or os.environ.get("AIO_API_KEY") or "dummy"
+    api_key = args.api_key or VLM_API_KEY
     output = args.output or os.path.splitext(args.image_list)[0] + ".jsonl"
 
     images = read_image_list(args.image_list)

@@ -23,7 +23,10 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader, IterableDataset
 
-from data import IMAGENET_MEAN, IMAGENET_STD
+from config import (
+    CLASSIFIER_VIDEO_BATCH_SIZE, DECODE_WORKERS, EVAL_VIDEO_RESULTS,
+    IMAGENET_MEAN, IMAGENET_STD, PREFETCH_FACTOR, RESIZE_RATIO, VIDEO_INTERVAL,
+)
 from eval import load_model
 
 logger = logging.getLogger("eval_video")
@@ -82,7 +85,7 @@ def preprocess(frames, image_size, device):
     """GPU 上做 Resize(int(size*1.14)) + CenterCrop + Normalize，等价于 data.py 的 val 变换。"""
     x = frames.to(device, non_blocking=True).float().div_(255.0)
     h, w = x.shape[-2:]
-    scale = int(image_size * 1.14) / min(h, w)
+    scale = int(image_size * RESIZE_RATIO) / min(h, w)
     x = F.interpolate(x, size=(round(h * scale), round(w * scale)), mode="bilinear", antialias=True)
     top = (x.shape[-2] - image_size) // 2
     left = (x.shape[-1] - image_size) // 2
@@ -98,11 +101,11 @@ def main(argv=None):
     parser.add_argument("--config", default=None, help="不传则用 ckpt 里保存的配置；纯权重文件必须传")
     parser.add_argument("--video", required=True, help="视频路径")
     parser.add_argument("--classes", default=None, help="逗号分隔的类别顺序，默认从训练集目录推断")
-    parser.add_argument("-o", "--output", default="outputs/eval_video.jsonl")
-    parser.add_argument("--interval", type=float, default=60.0, help="抽帧间隔（秒），默认 60")
-    parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--workers", type=int, default=1, help="DataLoader 解码进程数，默认 1")
-    parser.add_argument("--prefetch", type=int, default=2, help="每个 worker 预取批数，默认 2")
+    parser.add_argument("-o", "--output", default=EVAL_VIDEO_RESULTS)
+    parser.add_argument("--interval", type=float, default=VIDEO_INTERVAL, help="抽帧间隔（秒）")
+    parser.add_argument("--batch-size", type=int, default=CLASSIFIER_VIDEO_BATCH_SIZE)
+    parser.add_argument("--workers", type=int, default=DECODE_WORKERS, help="DataLoader 解码进程数")
+    parser.add_argument("--prefetch", type=int, default=PREFETCH_FACTOR, help="每个 worker 预取批数")
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args(argv)
 

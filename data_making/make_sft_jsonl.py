@@ -9,12 +9,11 @@
 import argparse
 import json
 import os
+import sys
 
-PROMPT = (
-    "这是一帧电影画面。请判断画面中是否有字幕：有字幕则提取中文字幕和英文字幕，"
-    "没有则 has_subtitle 为 false。只输出 JSON，格式为 "
-    '{"has_subtitle": true, "subtitle_cn": "...", "subtitle_en": "..."}'
-)
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config import ALL_IMAGES_JSONL, SFT_JSONL, SFT_PROMPT
 
 
 def image_path(path):
@@ -26,9 +25,9 @@ def image_path(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("-i", "--input", default="data/all_images.jsonl")
-    parser.add_argument("-o", "--output", default="outputs/subtitle_sft.jsonl")
-    parser.add_argument("--prompt", default=PROMPT)
+    parser.add_argument("-i", "--input", default=ALL_IMAGES_JSONL)
+    parser.add_argument("-o", "--output", default=SFT_JSONL)
+    parser.add_argument("--prompt", default=SFT_PROMPT)
     args = parser.parse_args(argv)
 
     os.makedirs(os.path.dirname(os.path.abspath(args.output)), exist_ok=True)

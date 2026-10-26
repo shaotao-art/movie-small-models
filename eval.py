@@ -18,6 +18,7 @@ import torch
 from PIL import Image
 from torchvision.datasets import ImageFolder
 
+from config import CLASSIFIER_BATCH_SIZE, EVAL_RESULTS
 from data import _transforms
 from data_making.build_cls_dataset import resolve_image
 from model import build_model
@@ -92,8 +93,8 @@ def main(argv=None):
     parser.add_argument("--image", action="append", default=[], help="单张图片，可重复")
     parser.add_argument("--image-list", action="append", default=[], help="图片列表文件，可重复")
     parser.add_argument("--classes", default=None, help="逗号分隔的类别顺序，默认从训练集目录推断")
-    parser.add_argument("-o", "--output", default="outputs/eval_results.jsonl")
-    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("-o", "--output", default=EVAL_RESULTS)
+    parser.add_argument("--batch-size", type=int, default=CLASSIFIER_BATCH_SIZE)
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = parser.parse_args(argv)
 

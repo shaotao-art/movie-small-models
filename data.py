@@ -1,25 +1,23 @@
 import os
 
+from config import IMAGENET_MEAN, IMAGENET_STD, RESIZE_RATIO
 from torch.utils.data import DataLoader
 from torch.utils.data.distributed import DistributedSampler
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
-
-IMAGENET_MEAN = [0.485, 0.456, 0.406]
-IMAGENET_STD = [0.229, 0.224, 0.225]
 
 
 def _transforms(image_size):
     train_tf = transforms.Compose([
         # transforms.RandomResizedCrop(image_size, scale=(0.7, 1.0)),
         # transforms.RandomHorizontalFlip(),
-        transforms.Resize(int(image_size * 1.14)),
+        transforms.Resize(int(image_size * RESIZE_RATIO)),
         transforms.CenterCrop(image_size),
         transforms.ToTensor(),
         transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
     ])
     val_tf = transforms.Compose([
-        transforms.Resize(int(image_size * 1.14)),
+        transforms.Resize(int(image_size * RESIZE_RATIO)),
         transforms.CenterCrop(image_size),
         transforms.ToTensor(),
         transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),

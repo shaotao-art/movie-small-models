@@ -8,8 +8,13 @@
 
 import argparse
 import os
+import sys
 
 import torch
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from config import WEIGHTS_SUFFIX
 
 
 def main(argv=None):
@@ -20,7 +25,7 @@ def main(argv=None):
 
     ckpt = torch.load(args.ckpt, map_location="cpu", weights_only=False)
     state = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
-    output = args.output or os.path.splitext(args.ckpt)[0] + "_weights.pth"
+    output = args.output or os.path.splitext(args.ckpt)[0] + WEIGHTS_SUFFIX
     torch.save(state, output)
     print(f"saved {len(state)} tensors -> {output}")
 
