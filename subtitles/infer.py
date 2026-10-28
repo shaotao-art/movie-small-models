@@ -20,8 +20,8 @@ from config import (
     SFT_PROMPT, VLM_API_KEY, VLM_BASE_URL, VLM_OUTPUT_SUFFIX,
     VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
 )
-from data_making.build_cls_dataset import resolve_image
-from data_making.dist_use_qwen38 import SubtitleClient, read_done, resolve_model
+from data_making.srt_model.build_cls_dataset import resolve_image
+from data_making.srt_model.dist_use_qwen38 import SubtitleClient, read_done, resolve_model
 
 logger = logging.getLogger("infer")
 

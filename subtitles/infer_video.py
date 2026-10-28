@@ -23,7 +23,7 @@ from config import (
     SFT_PROMPT, VLM_API_KEY, VLM_BASE_URL, VLM_BATCH_SIZE, VLM_OUTPUT_SUFFIX,
     VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
 )
-from data_making.dist_use_qwen38 import SubtitleClient, resolve_model
+from data_making.srt_model.dist_use_qwen38 import SubtitleClient, resolve_model
 from subtitles.eval_video import VideoBatchDataset
 
 logger = logging.getLogger("infer_video")

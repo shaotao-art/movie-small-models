@@ -20,7 +20,7 @@ from torchvision.datasets import ImageFolder
 
 from config import CLASSIFIER_BATCH_SIZE, EVAL_RESULTS
 from classifier.data import _transforms
-from data_making.build_cls_dataset import resolve_image
+from data_making.srt_model.build_cls_dataset import resolve_image
 from classifier.model import build_model
 from classifier.utils import load_config
 
