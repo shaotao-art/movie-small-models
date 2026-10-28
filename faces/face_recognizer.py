@@ -9,9 +9,9 @@ key 与其它流水线的片段 uid 一致（整段场景为 scene_0000），并
 裁剪图存到 config.FACE_CROPS_DIR，方便人工核对判定对错。
 
 用法:
-    python face_recognizer.py --check          # 只检查参考图能否建出 gallery
-    python face_recognizer.py --limit 5        # 先跑 5 个片段看看
-    python face_recognizer.py --workers 4      # 跑 config.SCENES_DIR 下所有整段场景
+    python -m faces.face_recognizer --check          # 只检查参考图能否建出 gallery
+    python -m faces.face_recognizer --limit 5        # 先跑 5 个片段看看
+    python -m faces.face_recognizer --workers 4      # 跑 config.SCENES_DIR 下所有整段场景
 """
 import argparse
 import logging

@@ -7,8 +7,8 @@
     FACE_CLUSTER_DIR / SCENES_PKL
 
 用法:
-    python run_faces.py                              # 默认 config.VIDEO_PATH
-    python run_faces.py data/xinluT/376_raw.MP4
+    python -m faces.run_faces                              # 默认 config.VIDEO_PATH
+    python -m faces.run_faces data/xinluT/376_raw.MP4
 """
 
 import argparse
@@ -16,10 +16,10 @@ import os
 
 import cv2
 
-from cluster_faces import main as cluster_main
+from faces.cluster_faces import main as cluster_main
 from config import FACE_CLUSTER_DIR, FACE_TRACK_IOU, SCENES_PKL, VIDEO_PATH
-from propagate_faces import main as propagate_main
-from scene_det import load_scene_det_res
+from faces.propagate_faces import main as propagate_main
+from scenes.scene_det import load_scene_det_res
 
 
 def video_duration(path: str) -> float:

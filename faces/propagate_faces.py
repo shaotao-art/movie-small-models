@@ -5,8 +5,8 @@
 时，把名字扩展到未识别的框上；先正向、再反向各一遍。
 
 用法:
-    python propagate_faces.py
-    python propagate_faces.py outputs/face_clusters/tlou_s1e3/faces.jsonl \
+    python -m faces.propagate_faces
+    python -m faces.propagate_faces outputs/face_clusters/tlou_s1e3/faces.jsonl \
         -o outputs/face_clusters/tlou_s1e3/faces_propagated.jsonl --iou 0.6
 """
 
@@ -17,8 +17,8 @@ import os
 from collections import Counter, defaultdict
 
 from config import CHARACTER_REFS, FACE_TRACK_IOU, SCENES_PKL
-from face_recognizer import propagate_labels_bidirectional
-from scene_det import load_scene_det_res
+from faces.face_recognizer import propagate_labels_bidirectional
+from scenes.scene_det import load_scene_det_res
 
 
 def propagate_run(frames: dict[int, list[dict]], frame_ids: list[int], iou_thresh: float) -> int:

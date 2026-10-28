@@ -8,8 +8,8 @@
 4. 这些标注帧就是 1fps 采样结果，发给 qwen35 生成画面描述。
 
 用法:
-    python make_scene_captions.py --limit 3   # 先跑前 3 个片段
-    python make_scene_captions.py             # 全部
+    python -m scenes.make_scene_captions --limit 3   # 先跑前 3 个片段
+    python -m scenes.make_scene_captions             # 全部
 
 输出:
     outputs/scene_captions/<uid>/annotated.mp4
@@ -40,12 +40,12 @@ from config import (
     CAPTION_SAMPLE_FPS, CAPTION_WORKERS, CHARACTER_REFS, FACE_MATCH_THRESH,
     SCENE_CAPTION_DIR, SCENES_PKL, SRT_PATH, VIDEO_PATH,
 )
-from face_recognizer import (
+from faces.face_recognizer import (
     build_gallery, detect_faces, embed_faces, ensure_models, load_models, match_feature,
     propagate_labels_bidirectional,
 )
-from scene_det import load_scene_det_res
-from srt_preprocessor import SrtProcesser
+from scenes.scene_det import load_scene_det_res
+from subtitles.srt_preprocessor import SrtProcesser
 
 logger = logging.getLogger("scene_caption")
 

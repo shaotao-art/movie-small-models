@@ -4,8 +4,8 @@
 文本每行输出一条字幕，时间取该行首字符到末字符的对齐结果。
 
 用法（默认就是 data/xinluT 下那对文件）:
-    python align_srt.py
-    python align_srt.py --audio data/xinluT/gen_sound_with_bg.mp3 \
+    python -m subtitles.align_srt
+    python -m subtitles.align_srt --audio data/xinluT/gen_sound_with_bg.mp3 \
         --text data/xinluT/script.txt -o data/xinluT/gen_sound_with_bg.srt
 """
 

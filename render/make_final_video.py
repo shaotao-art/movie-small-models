@@ -6,8 +6,8 @@
 3. 把 patched 视频和新音频合并成 final_video.mp4（视频流直接 copy，不丢帧）。
 
 用法:
-    python make_final_video.py
-    python make_final_video.py --speech data/xinluT/seed/还原版.mp3 \
+    python -m render.make_final_video
+    python -m render.make_final_video --speech data/xinluT/seed/还原版.mp3 \
         --output data/xinluT/final_video.mp4
 """
 
@@ -15,7 +15,7 @@ import argparse
 import shutil
 import subprocess
 
-from patch_video_subtitles import find_ffmpeg, patch_video
+from render.patch_video_subtitles import find_ffmpeg, patch_video
 
 
 def need(cmd: str) -> str:

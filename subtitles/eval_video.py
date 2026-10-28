@@ -6,8 +6,8 @@ IterableDataset + DataLoader(num_workers=1, prefetch_factor=2)：
 （环境里没有 decord，解码用 OpenCV；接口与 decord 版一致。）
 
 用法:
-    python eval_video.py --ckpt outputs/resnet18/best.pth --video movie.mp4
-    python eval_video.py --ckpt outputs/efficientnet_b0/best_weights.pth \
+    python -m subtitles.eval_video --ckpt outputs/resnet18/best.pth --video movie.mp4
+    python -m subtitles.eval_video --ckpt outputs/efficientnet_b0/best_weights.pth \
         --config configs/efficientnet_b0.yaml --video movie.mp4 --interval 10 -o outputs/movie_eval.jsonl
 """
 
@@ -26,7 +26,7 @@ from config import (
     CLASSIFIER_VIDEO_BATCH_SIZE, DECODE_WORKERS, EVAL_VIDEO_RESULTS,
     IMAGENET_MEAN, IMAGENET_STD, PREFETCH_FACTOR, RESIZE_RATIO, VIDEO_INTERVAL,
 )
-from eval import load_model
+from classifier.eval import load_model
 
 logger = logging.getLogger("eval_video")
 

@@ -2,8 +2,8 @@
 """把人脸检测/聚类结果渲染成一个 HTML（结果图 + 全部检测明细）。
 
 用法:
-    python visualize_faces.py                          # 默认 outputs/face_clusters/<视频名>/
-    python visualize_faces.py outputs/face_clusters/xxx
+    python -m faces.visualize_faces                          # 默认 outputs/face_clusters/<视频名>/
+    python -m faces.visualize_faces outputs/face_clusters/xxx
 输出:
     <结果目录>/report.html
 """
@@ -130,13 +130,13 @@ def main(argv=None):
     stem = os.path.splitext(os.path.basename(VIDEO_PATH))[0]
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("input", nargs="?", default=os.path.join(FACE_CLUSTER_DIR, stem),
-                        help="cluster_faces.py 的输出目录")
+                        help="faces/cluster_faces.py 的输出目录")
     parser.add_argument("-o", "--output", default=None, help="默认 <input>/report.html")
     args = parser.parse_args(argv)
 
     summary_path = os.path.join(args.input, "clusters.json")
     if not os.path.exists(summary_path):
-        parser.error(f"找不到 {summary_path}，先运行 cluster_faces.py")
+        parser.error(f"找不到 {summary_path}，先运行 faces/cluster_faces.py")
     output = args.output or os.path.join(args.input, "report.html")
 
     data = load_json(summary_path)

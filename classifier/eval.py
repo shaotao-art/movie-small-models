@@ -2,11 +2,11 @@
 """对图片 / 图片列表跑分类器，所有推理结果写到一个 jsonl。
 
 用法:
-    python eval.py --ckpt outputs/resnet18/best.pth --image data/frames/xxx/frame_000001.jpg
-    python eval.py --ckpt outputs/resnet18/best.pth --image-list list.txt -o preds.jsonl
+    python -m classifier.eval --ckpt outputs/resnet18/best.pth --image data/frames/xxx/frame_000001.jpg
+    python -m classifier.eval --ckpt outputs/resnet18/best.pth --image-list list.txt -o preds.jsonl
     # 纯权重（tools/export_weights.py 导出）需要 --config
-    python eval.py --ckpt outputs/resnet18/best_weights.pth --config configs/resnet18.yaml --image a.jpg
-    # 视频请用 eval_video.py
+    python -m classifier.eval --ckpt outputs/resnet18/best_weights.pth --config configs/resnet18.yaml --image a.jpg
+    # 视频请用 subtitles/eval_video.py
 """
 
 import argparse
@@ -19,10 +19,10 @@ from PIL import Image
 from torchvision.datasets import ImageFolder
 
 from config import CLASSIFIER_BATCH_SIZE, EVAL_RESULTS
-from data import _transforms
+from classifier.data import _transforms
 from data_making.build_cls_dataset import resolve_image
-from model import build_model
-from utils import load_config
+from classifier.model import build_model
+from classifier.utils import load_config
 
 logger = logging.getLogger("eval")
 
@@ -60,7 +60,7 @@ def predict(model, paths, tf, device, batch_size):
 def load_model(ckpt_path, config_path=None, classes=None):
     """加载 checkpoint 或纯权重，返回 (model, cfg, classes)。classes 为逗号分隔字符串或列表。"""
     ckpt = torch.load(ckpt_path, map_location="cpu", weights_only=False)
-    if isinstance(ckpt, dict) and "model" in ckpt:  # train.py 的 checkpoint
+    if isinstance(ckpt, dict) and "model" in ckpt:  # classifier/train.py 的 checkpoint
         state, ckpt_cfg = ckpt["model"], ckpt.get("config")
     else:  # tools/export_weights.py 导出的纯 state_dict
         state, ckpt_cfg = ckpt, None

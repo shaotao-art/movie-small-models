@@ -1,12 +1,12 @@
 #!/usr/bin/env python
-"""用部署好的 SFT VLM 对视频逐帧抽字幕：读取 eval_video.py 的结果，只解码判为有字幕的帧。
+"""用部署好的 SFT VLM 对视频逐帧抽字幕：读取 subtitles/eval_video.py 的结果，只解码判为有字幕的帧。
 
 解码在 DataLoader worker 里后台预取（复用 eval_video.VideoBatchDataset，不回跳视频），
 主线程把帧并发送给 VLM。重跑会跳过已完成的 (video, frame_index)。
 
 用法:
-    python infer_video.py outputs/movie_eval.jsonl --base-url http://127.0.0.1:8080
-    python infer_video.py outputs/movie_eval.jsonl -o outputs/movie_vlm.jsonl -w 16 --batch-size 16
+    python -m subtitles.infer_video outputs/movie_eval.jsonl --base-url http://127.0.0.1:8080
+    python -m subtitles.infer_video outputs/movie_eval.jsonl -o outputs/movie_vlm.jsonl -w 16 --batch-size 16
 """
 
 import argparse
@@ -24,7 +24,7 @@ from config import (
     VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
 )
 from data_making.dist_use_qwen38 import SubtitleClient, resolve_model
-from eval_video import VideoBatchDataset
+from subtitles.eval_video import VideoBatchDataset
 
 logger = logging.getLogger("infer_video")
 
@@ -41,7 +41,7 @@ def read_frames(path):
                 continue
             video, idx = rec.get("video"), rec.get("frame_index")
             if video is None or idx is None:
-                raise ValueError(f"{path} 不是 eval_video.py 的输出（记录缺少 video/frame_index）")
+                raise ValueError(f"{path} 不是 subtitles/eval_video.py 的输出（记录缺少 video/frame_index）")
             groups.setdefault(video, {})[idx] = rec
     return groups
 
@@ -62,7 +62,7 @@ def read_done(path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("eval_jsonl", help="eval_video.py 输出的 jsonl")
+    parser.add_argument("eval_jsonl", help="subtitles/eval_video.py 输出的 jsonl")
     parser.add_argument("-o", "--output", default=None, help="默认 <eval_jsonl 同名>_vlm.jsonl")
     parser.add_argument("--base-url", default=VLM_BASE_URL, help="已部署 VLM 的服务地址")
     parser.add_argument("--model", default=None, help="模型名，默认从 /v1/models 自动获取")

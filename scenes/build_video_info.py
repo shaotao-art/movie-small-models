@@ -5,8 +5,8 @@
 scene 额外带上 characters（画面里的确认人物）和 sub_captions（每个镜头的 caption）。
 
 用法:
-    python build_video_info.py
-    python build_video_info.py -c outputs/scene_captions/captions.jsonl -o outputs/video_info.json
+    python -m scenes.build_video_info
+    python -m scenes.build_video_info -c outputs/scene_captions/captions.jsonl -o outputs/video_info.json
 """
 
 import argparse
@@ -15,8 +15,8 @@ import os
 from dataclasses import asdict
 
 from config import SCENES_PKL, SCENE_CAPTION_DIR, SRT_PATH, VIDEO_INFO_JSON, VIDEO_PATH
-from scene_det import load_scene_det_res
-from srt_preprocessor import SrtProcesser
+from scenes.scene_det import load_scene_det_res
+from subtitles.srt_preprocessor import SrtProcesser
 
 
 def load_captions(path: str) -> dict[str, dict]:
@@ -33,7 +33,7 @@ def load_captions(path: str) -> dict[str, dict]:
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-c", "--captions", default=os.path.join(SCENE_CAPTION_DIR, "captions.jsonl"),
-                        help="make_scene_captions.py 汇总出的 captions.jsonl")
+                        help="scenes/make_scene_captions.py 汇总出的 captions.jsonl")
     parser.add_argument("-o", "--output", default=VIDEO_INFO_JSON)
     args = parser.parse_args(argv)
 

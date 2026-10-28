@@ -9,16 +9,16 @@
     SRT_MERGE_*                       字幕抖动合并参数
 
 用法:
-    python run_subtitles.py                          # 默认 config.VIDEO_PATH
-    python run_subtitles.py data/xinluT/376_raw.MP4
+    python -m subtitles.run_subtitles                          # 默认 config.VIDEO_PATH
+    python -m subtitles.run_subtitles data/xinluT/376_raw.MP4
 """
 
 import argparse
 import os
 
 from config import ANALYZE_OUTPUT_DIR, VIDEO_PATH
-from analyze_video import main as analyze_main
-from make_srt import main as srt_main
+from subtitles.analyze_video import main as analyze_main
+from subtitles.make_srt import main as srt_main
 
 
 def main(argv=None):

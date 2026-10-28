@@ -2,9 +2,9 @@
 """整片字幕分析：分类器判断每帧有无字幕，再用 SFT VLM 提取字幕文本。
 
 先跑测试（随机切 2min 片段）：
-    python analyze_video.py --test
+    python -m subtitles.analyze_video --test
 全片分析：
-    python analyze_video.py
+    python -m subtitles.analyze_video
 
 输出目录（测试为 outputs/analyze_test，全片为 outputs/analyze）：
     <stem>_cls.jsonl         每帧分类结果
@@ -25,8 +25,8 @@ from config import (
     ANALYZE_TEST_DIR, ANALYZE_TEST_SECONDS, CLASSIFIER_BATCH_SIZE, VIDEO_PATH,
     VLM_API_KEY, VLM_BASE_URL, VLM_BATCH_SIZE, VLM_WORKERS,
 )
-from eval_video import main as run_classifier
-from infer_video import main as run_vlm
+from subtitles.eval_video import main as run_classifier
+from subtitles.infer_video import main as run_vlm
 
 logger = logging.getLogger("analyze")
 

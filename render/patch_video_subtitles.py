@@ -8,8 +8,8 @@
 替换像素来自一张干净背景图（默认 data/xinluT/cleaned_bg_3840x2160.png）。
 
 用法:
-    python patch_video_subtitles.py
-    python patch_video_subtitles.py --video data/xinluT/376_raw.MP4 \
+    python -m render.patch_video_subtitles
+    python -m render.patch_video_subtitles --video data/xinluT/376_raw.MP4 \
         --subtitles outputs/analyze_376/376_raw_subtitles.jsonl \
         --output data/xinluT/gen_video_patched.MP4
 """

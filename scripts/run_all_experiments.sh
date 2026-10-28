@@ -3,10 +3,10 @@
 #
 # 用法:
 #   bash scripts/run_all_experiments.sh
-#   TRAIN_CMD="torchrun --nproc_per_node=4 train.py" bash scripts/run_all_experiments.sh
+#   TRAIN_CMD="torchrun --nproc_per_node=4 -m classifier.train" bash scripts/run_all_experiments.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
-TRAIN_CMD="${TRAIN_CMD:-python train.py}"
+TRAIN_CMD="${TRAIN_CMD:-python -m classifier.train}"
 
 for cfg in \
   configs/mobilenet_v3_large.yaml \

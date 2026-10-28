@@ -288,7 +288,7 @@ class SrtProcesser:
 
 if __name__ == "__main__":
     # 跑一遍完整流程并导出：台词 + 无台词场景 + scene detect 切片 + 画面描述
-    # python srt_preprocessor.py
+    # python -m subtitles.srt_preprocessor
     from scene_det import load_scene_det_res
 
     srt = SrtProcesser(config.SRT_PATH)

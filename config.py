@@ -43,7 +43,7 @@ SFT_PROMPT = (
     '{"has_subtitle": true, "subtitle_cn": "...", "subtitle_en": "..."}'
 )
 
-# 整片字幕分析（analyze_video.py：分类 + 提取）
+# 整片字幕分析（subtitles/analyze_video.py：分类 + 提取）
 ANALYZE_CKPT = "ckp-tag/best_weights_cls_mobilenet_v3.pth"
 ANALYZE_CONFIG = "configs/mobilenet_v3_small.yaml"  # 纯权重文件需要配套配置
 ANALYZE_OUTPUT_DIR = "outputs/analyze"
@@ -51,7 +51,7 @@ ANALYZE_TEST_DIR = "outputs/analyze_test"
 ANALYZE_INTERVAL = 0.1        # 抽帧间隔（秒）
 ANALYZE_TEST_SECONDS = 120.0  # 测试片段时长（秒）
 
-# 字幕文件生成（make_srt.py：合并 VLM 抖动）
+# 字幕文件生成（subtitles/make_srt.py：合并 VLM 抖动）
 SRT_MERGE_SIMILARITY = 0.75   # 相邻帧文本相似度阈值（去标点/空格后比较）
 SRT_MERGE_MAX_GAP = 0.5       # 相邻字幕帧最大间隔（秒），超过就断开
 SRT_MERGE_SAME_GAP = 1.0      # 同一句字幕中间漏采时的重连间隔（秒）
@@ -61,10 +61,10 @@ SRT_MERGE_MIN_DURATION = 0.3  # 单条字幕最短时长（秒）
 # 输入（本地剧集，按需替换）
 VIDEO_PATH = "data/tlou/tlou_s1e3.mp4"
 SRT_PATH = "data/tlou/tlou_s1e3.srt"
-SCENES_PKL = "data/tlou/tlou_scenes.pkl"  # scene_det.py 产出的镜头列表
+SCENES_PKL = "data/tlou/tlou_scenes.pkl"  # scenes/scene_det.py 产出的镜头列表
 
 # 输出
-SCENES_DIR = "output/tlou_s1e3_scenes"      # cut_videos.py 切出的无台词片段
+SCENES_DIR = "output/tlou_s1e3_scenes"      # scenes/cut_videos.py 切出的无台词片段
 CAPTIONS_DIR = "output/tlou_s1e3_captions"  # 每片段的画面描述
 SRT_JSON = "output/tlou_s1e3_srt.json"      # 台词 + 场景片段（含 caption）的完整导出
 
@@ -93,7 +93,7 @@ FACE_WORKERS = 4             # 并发处理的片段数
 FACES_JSON = "output/tlou_s1e3_faces.json"
 FACE_CROPS_DIR = "output/tlou_s1e3_face_crops"
 
-# 无参考图的全片人脸检测 + 聚类（cluster_faces.py）
+# 无参考图的全片人脸检测 + 聚类（faces/cluster_faces.py）
 FACE_CLUSTER_DIR = "outputs/face_clusters"
 FACE_CLUSTER_SAMPLE_SECONDS = 1.0  # 抽帧间隔（秒）
 FACE_CLUSTER_THRESH = 0.4          # 与簇中心余弦相似度阈值
@@ -116,7 +116,7 @@ VLLM_ENABLE_THINKING = False  # 思考会吃掉 max_tokens，content 可能为�
 DASHSCOPE_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 DASHSCOPE_MODEL = "qwen-plus"  # 需要环境变量 DASHSCOPE_API_KEY
 
-# ==================== 无台词场景标注 + caption（make_scene_captions.py）====================
+# ==================== 无台词场景标注 + caption（scenes/make_scene_captions.py）====================
 SCENE_CAPTION_DIR = "outputs/scene_captions"
 VIDEO_INFO_JSON = "outputs/video_info.json"
 CAPTION_PROMPT = "prompts/prompt_video_caption.txt"

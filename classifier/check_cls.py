@@ -2,8 +2,8 @@
 """快速检查数据集和模型：类别顺序、样本量、一个 batch 的形状、前向/反向和吞吐。
 
 用法:
-    python check_cls.py
-    python check_cls.py --config configs/resnet18.yaml --batches 5
+    python -m classifier.check_cls
+    python -m classifier.check_cls --config configs/resnet18.yaml --batches 5
 """
 
 import argparse
@@ -13,9 +13,9 @@ import time
 import torch
 import torch.nn.functional as F
 
-from data import build_dataloaders
-from model import build_model
-from utils import load_config
+from classifier.data import build_dataloaders
+from classifier.model import build_model
+from classifier.utils import load_config
 
 logger = logging.getLogger("check")
 

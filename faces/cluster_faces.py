@@ -6,11 +6,11 @@
 - 匹配不上的继续按余弦相似度在线聚类（与簇中心相似度超过阈值就归入，否则新建），
   最后合并质心相近的簇，每个簇保存几张代表脸，方便人工确认是谁。
 
-复用 face_recognizer.py 的模型加载/检测/特征提取/参考图匹配。
+复用 faces/face_recognizer.py 的模型加载/检测/特征提取/参考图匹配。
 
 用法:
-    python cluster_faces.py                              # 纯聚类
-    python cluster_faces.py --refs-dir data/tlou/ref_face # 参考图 + 聚类兜底
+    python -m faces.cluster_faces                              # 纯聚类
+    python -m faces.cluster_faces --refs-dir data/tlou/ref_face # 参考图 + 聚类兜底
 输出（默认 outputs/face_clusters/<视频名>/）:
     faces.jsonl    每张脸：时间、帧号、bbox、分数、person（人名或 person_XX）
     clusters.json  角色/簇：检测数、出现时间段、代表脸图片
@@ -31,7 +31,7 @@ from config import (
     CHARACTER_REFS, FACE_CLUSTER_CROPS, FACE_CLUSTER_DIR, FACE_CLUSTER_MIN_FACES,
     FACE_CLUSTER_SAMPLE_SECONDS, FACE_CLUSTER_THRESH, FACE_MATCH_THRESH, VIDEO_PATH,
 )
-from face_recognizer import (
+from faces.face_recognizer import (
     build_gallery, detect_faces, embed_faces, ensure_models, load_models, match_feature,
 )
 

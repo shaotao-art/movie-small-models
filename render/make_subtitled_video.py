@@ -1,15 +1,15 @@
 #!/usr/bin/env python
-"""根据音频生成 SRT（调用 align_srt.py），并可把字幕烧录进视频。
+"""根据音频生成 SRT（调用 subtitles/align_srt.py），并可把字幕烧录进视频。
 
 用法:
     # 只生成字幕
-    python make_subtitled_video.py
+    python -m render.make_subtitled_video
 
     # 生成字幕 + 烧录
-    python make_subtitled_video.py --burn
+    python -m render.make_subtitled_video --burn
 
     # 指定字体/字号/离底部距离
-    python make_subtitled_video.py --burn \
+    python -m render.make_subtitled_video --burn \
         --font assets/AaRiFuYiRiKeAiYuan-2.ttf --font-size 96 --margin-v 204
 """
 
@@ -22,8 +22,8 @@ import subprocess
 import cv2
 from PIL import ImageFont
 
-from align_srt import main as align_main
-from patch_video_subtitles import find_ffmpeg
+from subtitles.align_srt import main as align_main
+from render.patch_video_subtitles import find_ffmpeg
 
 
 def escape_filter_path(path: str) -> str:

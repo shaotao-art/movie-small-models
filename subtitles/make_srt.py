@@ -1,13 +1,13 @@
 #!/usr/bin/env python
-"""把 analyze_video.py 的逐帧字幕结果合并成 SRT，容忍 VLM 的轻微抖动。
+"""把 subtitles/analyze_video.py 的逐帧字幕结果合并成 SRT，容忍 VLM 的轻微抖动。
 
 相邻帧文本（去掉标点/空格、NFKC 归一化后）相似度超过阈值、且时间间隔不大时
 视为同一条字幕；夹在两条相同字幕之间的 1~2 帧异常结果会被吸收，不会产生
 闪一下就消失的字幕。每条字幕取该组里出现次数最多的文本。
 
 用法:
-    python make_srt.py
-    python make_srt.py outputs/analyze/xxx_subtitles.jsonl -o xxx.srt --similarity 0.8
+    python -m subtitles.make_srt
+    python -m subtitles.make_srt outputs/analyze/xxx_subtitles.jsonl -o xxx.srt --similarity 0.8
 """
 
 import argparse

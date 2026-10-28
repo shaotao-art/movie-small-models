@@ -10,9 +10,9 @@ import torch.nn as nn
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from data import build_dataloaders
-from model import build_model
-from utils import evaluate, load_config, seed_everything, setup_logging, train_one_epoch
+from classifier.data import build_dataloaders
+from classifier.model import build_model
+from classifier.utils import evaluate, load_config, seed_everything, setup_logging, train_one_epoch
 
 
 def main():

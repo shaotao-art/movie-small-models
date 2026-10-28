@@ -19,7 +19,7 @@ from config import WEIGHTS_SUFFIX
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("ckpt", help="train.py 保存的 best.pth / last.pth")
+    parser.add_argument("ckpt", help="classifier/train.py 保存的 best.pth / last.pth")
     parser.add_argument("-o", "--output", default=None, help="默认 <ckpt 同目录>/<名字>_weights.pth")
     args = parser.parse_args(argv)
 

@@ -4,8 +4,8 @@
 按时间顺序解码一遍视频，只对 faces.jsonl 里该 person 的帧做裁剪。
 
 用法:
-    python crop_faces.py outputs/face_clusters/tlou_s1e3 --person person_00
-    python crop_faces.py outputs/face_clusters/tlou_s1e3 --person 乔尔
+    python -m faces.crop_faces outputs/face_clusters/tlou_s1e3 --person person_00
+    python -m faces.crop_faces outputs/face_clusters/tlou_s1e3 --person 乔尔
 输出:
     <结果目录>/<person>_crops/0001_t0015.02_f000360.jpg ...
 """
@@ -25,7 +25,7 @@ def main(argv=None):
     stem = os.path.splitext(os.path.basename(VIDEO_PATH))[0]
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("input", nargs="?", default=os.path.join(FACE_CLUSTER_DIR, stem),
-                        help="cluster_faces.py 的输出目录")
+                        help="faces/cluster_faces.py 的输出目录")
     parser.add_argument("--person", required=True, help="人名或 person_XX")
     parser.add_argument("--video", default=None, help="默认用 clusters.json 里记录的视频")
     parser.add_argument("-o", "--output", default=None, help="默认 <input>/<person>_crops")
