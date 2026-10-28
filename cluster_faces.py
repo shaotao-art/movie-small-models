@@ -100,6 +100,7 @@ def main(argv=None):
     parser.add_argument("--merge-thresh", type=float, default=None, help="簇合并阈值，默认同 --thresh")
     parser.add_argument("--min-faces", type=int, default=FACE_CLUSTER_MIN_FACES, help="少于该检测数的簇标为 noise")
     parser.add_argument("--refs-dir", default=None, help="参考图目录；给了就按人脸识别结果命名")
+    parser.add_argument("--refs", action="store_true", help="使用 config.CHARACTER_REFS 里的参考图")
     parser.add_argument("--match-thresh", type=float, default=FACE_MATCH_THRESH,
                         help="与参考图的匹配阈值")
     parser.add_argument("--crops", type=int, default=FACE_CLUSTER_CROPS, help="每簇保存几张代表脸")
@@ -110,7 +111,8 @@ def main(argv=None):
         parser.error(f"找不到视频: {args.video}")
     detector_path, recognizer_path = ensure_models()
     detector, recognizer = load_models(detector_path, recognizer_path)
-    gallery = build_gallery(collect_refs(args.refs_dir), detector, recognizer) if args.refs_dir else {}
+    refs = CHARACTER_REFS if args.refs else (collect_refs(args.refs_dir) if args.refs_dir else {})
+    gallery = build_gallery(refs, detector, recognizer) if refs else {}
 
     cap = cv2.VideoCapture(args.video)
     if not cap.isOpened():

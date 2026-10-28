@@ -86,6 +86,7 @@ FACE_MODEL_URLS = {
 FACE_DETECT_SCORE = 0.7      # YuNet 检测置信度阈值
 FACE_MIN_FACE_PX = 40        # 脸太小的直接丢
 FACE_MATCH_THRESH = 0.363    # SFace 余弦相似度阈值
+FACE_TRACK_IOU = 0.6         # 同场景相邻帧人脸框 IoU 超过它时继承上一帧的人名
 FACE_FRAMES_PER_CLIP = 8     # 每个片段抽几帧做人脸比对
 FACE_MIN_HIT_FRAMES = 2      # 至少命中几帧才算角色出现
 FACE_WORKERS = 4             # 并发处理的片段数

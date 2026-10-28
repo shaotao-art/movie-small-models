@@ -4,7 +4,7 @@
 1. 用 SRT 找出无台词片段（相邻字幕间隔 > NO_LINE_TIME_THRES）；
 2. 按 tlou_scenes.pkl 里的镜头边界切分；
 3. 每个片段按 1fps 抽帧，做人脸检测 + 参考图识别，把框和名字画在帧上，
-   写出 annotated.mp4（1fps，不做中间帧检测）；
+   未识别的脸会继承同一 scene 上一帧 IoU > 0.6 的人名；写出 annotated.mp4；
 4. 这些标注帧就是 1fps 采样结果，发给 qwen35 生成画面描述。
 
 用法:
@@ -42,6 +42,7 @@ from config import (
 )
 from face_recognizer import (
     build_gallery, detect_faces, embed_faces, ensure_models, load_models, match_feature,
+    propagate_labels_bidirectional,
 )
 from scene_det import load_scene_det_res
 from srt_preprocessor import SrtProcesser
@@ -91,18 +92,29 @@ def data_url(path: str) -> str:
         return "data:image/jpeg;base64," + base64.b64encode(f.read()).decode()
 
 
-def draw_faces(frame: np.ndarray, detector, recognizer, gallery, font) -> np.ndarray:
+def match_faces(frame: np.ndarray, detector, recognizer, gallery) -> list[dict]:
     faces = detect_faces(detector, frame)
-    if not faces:
-        return frame
-    img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-    draw = ImageDraw.Draw(img)
+    dets = []
     for face, (_, feat) in zip(faces, embed_faces(recognizer, frame, faces)):
         name, score = match_feature(recognizer, np.asarray(feat), gallery)
         known = name is not None and score >= FACE_MATCH_THRESH
-        label = f"{name} {score:.2f}" if known else "未知"
-        color = (220, 40, 40) if known else (140, 140, 140)
-        x, y, w, h = (int(round(v)) for v in face[:4])
+        dets.append({"bbox": face[:4], "name": name if known else None,
+                     "score": float(score) if known else 0.0})
+    return dets
+
+
+def draw_faces(frame: np.ndarray, dets: list[dict], font) -> np.ndarray:
+    if not dets:
+        return frame
+    img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(img)
+    for det in dets:
+        name, score = det["name"], det["score"]
+        label = f"{name} {score:.2f}" if name else "未知"
+        if det.get("propagated"):
+            label += " *"
+        color = (220, 40, 40) if name else (140, 140, 140)
+        x, y, w, h = (int(round(v)) for v in det["bbox"])
         draw.rectangle([x, y, x + w, y + h], outline=color, width=3)
         left, top, right, bottom = draw.textbbox((0, 0), label, font=font)
         ty = max(0, y - (bottom - top) - 6)
@@ -123,7 +135,22 @@ def frames_ready(clip_dir: str, expected: int) -> bool:
     return ok
 
 
-def annotate(clips: list[dict], video: str, detector, recognizer, gallery, font) -> None:
+def _iter_targets(cap, targets, last, bar_total, desc):
+    """顺序解码视频，只在目标帧 yield (idx, items, frame, bar)。"""
+    idx = 0
+    with tqdm(total=bar_total, desc=desc, unit="frame") as bar:
+        while idx <= last and cap.grab():
+            items = targets.get(idx)
+            if items:
+                ok, frame = cap.retrieve()
+                if not ok:
+                    break
+                yield idx, items, frame, bar
+            bar.update(1)
+            idx += 1
+
+
+def annotate(clips: list[dict], video: str, detector, recognizer, gallery, font) -> int:
     cap = cv2.VideoCapture(video)
     if not cap.isOpened():
         raise RuntimeError(f"打不开视频: {video}")
@@ -142,44 +169,55 @@ def annotate(clips: list[dict], video: str, detector, recognizer, gallery, font)
             targets.setdefault(int(round(t * fps)), []).append((clip, k))
     if not targets:
         cap.release()
-        return
+        return 0
 
-    writer = None
-    writer_uid = None
     last = max(targets)
     total_samples = sum(len(v) for v in targets.values())
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     bar_total = min(last + 1, total_frames) if total_frames > 0 else last + 1
-    done = idx = 0
-    with tqdm(total=bar_total, desc="annotate", unit="frame") as bar:
-        while idx <= last and cap.grab():
-            items = targets.get(idx)
-            if items:
-                ok, frame = cap.retrieve()
-                if not ok:
-                    break
-                annotated = draw_faces(frame, detector, recognizer, gallery, font)
-                for clip, k in items:
-                    path = os.path.join(clip["dir"], f"frame_{k + 1:03d}.jpg")
-                    cv2.imwrite(path, annotated)
-                    if clip["uid"] != writer_uid:  # 片段按时间顺序处理，只保留一个 writer
-                        if writer is not None:
-                            writer.release()
-                        writer = cv2.VideoWriter(
-                            os.path.join(clip["dir"], "annotated.mp4"),
-                            cv2.VideoWriter_fourcc(*"mp4v"), CAPTION_SAMPLE_FPS, (width, height),
-                        )
-                        writer_uid = clip["uid"]
-                    writer.write(annotated)
-                    done += 1
-                    bar.set_postfix_str(
-                        f"t={fmt_time(idx / fps)} samples={done}/{total_samples} {clip['uid']}"
-                    )
-            bar.update(1)
-            idx += 1
+
+    # 第一遍：检测 + 识别，先不画
+    dets_by_clip = {}
+    for _, items, frame, _ in _iter_targets(cap, targets, last, bar_total, "detect"):
+        dets = match_faces(frame, detector, recognizer, gallery)
+        for clip, k in items:
+            dets_by_clip.setdefault(clip["uid"], {})[k] = dets
+    cap.release()
+
+    # 每个 scene 内双向扩展人名（中间帧识别到，前后都能继承）
+    propagated = 0
+    for by_k in dets_by_clip.values():
+        seq = [by_k[k] for k in sorted(by_k)]
+        propagate_labels_bidirectional(seq)
+        propagated += sum(bool(d.get("propagated")) for dets in seq for d in dets)
+
+    # 第二遍：画框 + 写帧/视频
+    cap = cv2.VideoCapture(video)
+    writer = None
+    writer_uid = None
+    done = 0
+    for idx, items, frame, bar in _iter_targets(cap, targets, last, bar_total, "annotate"):
+        for clip, k in items:
+            dets = dets_by_clip.get(clip["uid"], {}).get(k, [])
+            annotated = draw_faces(frame, dets, font)
+            cv2.imwrite(os.path.join(clip["dir"], f"frame_{k + 1:03d}.jpg"), annotated)
+            if clip["uid"] != writer_uid:  # 片段按时间顺序处理，只保留一个 writer
+                if writer is not None:
+                    writer.release()
+                writer = cv2.VideoWriter(
+                    os.path.join(clip["dir"], "annotated.mp4"),
+                    cv2.VideoWriter_fourcc(*"mp4v"), CAPTION_SAMPLE_FPS, (width, height),
+                )
+                writer_uid = clip["uid"]
+            writer.write(annotated)
+            done += 1
+            bar.set_postfix_str(
+                f"t={fmt_time(idx / fps)} samples={done}/{total_samples} {clip['uid']}"
+            )
     cap.release()
     if writer is not None:
         writer.release()
+    return propagated
 
 
 def load_prompt() -> str:
@@ -283,8 +321,8 @@ def main(argv=None):
         detector, recognizer = load_models(detector_path, recognizer_path)
         gallery = build_gallery(CHARACTER_REFS, detector, recognizer)
         t0 = time.time()
-        annotate(clips, args.video, detector, recognizer, gallery, font)
-        logger.info("[2/3] 标注完成，用时 %.0fs", time.time() - t0)
+        propagated = annotate(clips, args.video, detector, recognizer, gallery, font)
+        logger.info("[2/3] 标注完成，用时 %.0fs（跟踪扩展 %d 张脸）", time.time() - t0, propagated)
 
     if not args.no_caption:
         todo = [c for c in clips if not c["caption"]]

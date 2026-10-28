@@ -108,6 +108,49 @@ def match_feature(recognizer, feature: np.ndarray, gallery: dict) -> tuple[str, 
     return best_name, best_score
 
 
+def box_iou(a, b) -> float:
+    ax, ay, aw, ah = (float(v) for v in a[:4])
+    bx, by, bw, bh = (float(v) for v in b[:4])
+    x1, y1 = max(ax, bx), max(ay, by)
+    x2, y2 = min(ax + aw, bx + bw), min(ay + ah, by + bh)
+    inter = max(0.0, x2 - x1) * max(0.0, y2 - y1)
+    union = aw * ah + bw * bh - inter
+    return inter / union if union > 0 else 0.0
+
+
+def propagate_labels(prev: list[dict], cur: list[dict],
+                     iou_thresh: float = config.FACE_TRACK_IOU) -> list[dict]:
+    """同一场景相邻帧：未识别的人脸与上一帧已识别框 IoU 超过阈值时，继承上一帧的人名。
+
+    prev/cur 的元素：{"bbox": (x, y, w, h), "name": str|None, "score": float}
+    """
+    for det in cur:
+        if det["name"]:
+            continue
+        best, best_iou = None, iou_thresh
+        for old in prev:
+            if not old["name"]:
+                continue
+            iou = box_iou(det["bbox"], old["bbox"])
+            if iou > best_iou:
+                best, best_iou = old, iou
+        if best is not None:
+            det["name"] = best["name"]
+            det["score"] = best["score"]
+            det["propagated"] = True
+    return cur
+
+
+def propagate_labels_bidirectional(frames_dets: list[list[dict]],
+                                   iou_thresh: float = config.FACE_TRACK_IOU) -> list[list[dict]]:
+    """在一个场景内先正向、再反向扩展人名：中间帧识别到的角色可以覆盖前后帧。"""
+    for i in range(1, len(frames_dets)):
+        propagate_labels(frames_dets[i - 1], frames_dets[i], iou_thresh)
+    for i in range(len(frames_dets) - 2, -1, -1):
+        propagate_labels(frames_dets[i + 1], frames_dets[i], iou_thresh)
+    return frames_dets
+
+
 def build_gallery(character_refs: dict, detector, recognizer) -> dict[str, np.ndarray]:
     """对每个角色的参考图取最大的那张脸提特征，返回 name -> (K, 128) 特征矩阵"""
     gallery = {}
@@ -196,32 +239,42 @@ def identify_clip(
     num_frames: int = config.FACE_FRAMES_PER_CLIP,
     match_thresh: float = config.FACE_MATCH_THRESH,
     min_hit_frames: int = config.FACE_MIN_HIT_FRAMES,
+    track_iou: float = config.FACE_TRACK_IOU,
     crops_dir: str = None,
     frames_dir: str = None,
 ) -> dict:
     """判断一个片段里出现了哪些人物
 
     每帧每张脸与 gallery 比一次，取最像的角色；分数过阈值才算命中。
+    未识别的脸会在同一片段（场景）内按前后相邻帧 IoU > track_iou 双向继承人名。
     角色命中帧数 >= min_hit_frames 才认为出现。
     """
     frames = sample_frames(video_path, num_frames)
-    hits: dict[str, dict[int, float]] = {name: {} for name in gallery}
-    unknown_faces = 0
-    for frame_idx, image in frames:
+    all_dets = []
+    for _, image in frames:
         faces = detect_faces(detector, image)
-        matched = []
+        dets = []
         for face, (aligned, feature) in zip(
             faces, embed_faces(recognizer, image, faces)
         ):
             name, score = match_feature(recognizer, feature, gallery)
             if score < match_thresh:
                 name = None
-            matched.append((face, name, score))
+            dets.append({"bbox": face[:4], "name": name, "score": float(score),
+                         "face": face, "aligned": aligned})
+        all_dets.append(dets)
+    propagate_labels_bidirectional(all_dets, track_iou)
+
+    hits: dict[str, dict[int, float]] = {name: {} for name in gallery}
+    unknown_faces = 0
+    for (frame_idx, image), dets in zip(frames, all_dets):
+        for det in dets:
+            name, score = det["name"], det["score"]
             if crops_dir:
                 tag = f"{name}_{score:.2f}" if name else f"未知_{score:.2f}"
                 # save_image 要 RGB，aligned 是 BGR
                 save_image(
-                    cv2.cvtColor(aligned, cv2.COLOR_BGR2RGB),
+                    cv2.cvtColor(det["aligned"], cv2.COLOR_BGR2RGB),
                     os.path.join(crops_dir, f"{uid}__{tag}_{frame_idx:04d}.jpg"),
                 )
             if name is None:
@@ -231,9 +284,12 @@ def identify_clip(
         if frames_dir:
             # 整帧存一份并画上人脸框+判定结果，方便人工核对
             drawn = image.copy()
-            for face, name, score in matched:
-                x, y, w, h = (int(v) for v in face[:4])
+            for det in dets:
+                name, score = det["name"], det["score"]
+                x, y, w, h = (int(v) for v in det["face"][:4])
                 tag = f"{name} {score:.2f}" if name else f"未知 {score:.2f}"
+                if det.get("propagated"):
+                    tag += " *"
                 cv2.rectangle(drawn, (x, y), (x + w, y + h), (0, 0, 255), 2)
                 cv2.putText(
                     drawn, tag, (x, max(y - 8, 16)),
