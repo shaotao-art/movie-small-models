@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 依次跑 configs/ 下所有模型实验（template.yaml 除外）
+# 依次跑 classifier/configs/ 下所有模型实验（template.yaml 除外）
 #
 # 用法:
 #   bash scripts/run_all_experiments.sh

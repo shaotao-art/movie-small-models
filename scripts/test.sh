@@ -7,7 +7,7 @@
 # 视频评测示例
 python -m subtitles.eval_video \
 --ckpt ckp-tag/best_weights_cls_mobilenet_v3.pth \
---config configs/mobilenet_v3_small.yaml \
+--config classifier/configs/mobilenet_v3_small.yaml \
 --video "/run/media/tao/56AE654DAE6526A9/迅雷下载/[电影天堂www.dytt89.com]血色将至-2007_蓝光中英双字.mp4.bt.xltd" \
 --output outputs/cls_results_there_will_be_blood.jsonl \
 --batch-size 256 \

@@ -3,7 +3,7 @@
 
 用法:
     python -m classifier.check_cls
-    python -m classifier.check_cls --config configs/resnet18.yaml --batches 5
+    python -m classifier.check_cls --config classifier/configs/resnet18.yaml --batches 5
 """
 
 import argparse
@@ -22,7 +22,7 @@ logger = logging.getLogger("check")
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--config", default="configs/resnet18.yaml")
+    parser.add_argument("--config", default="classifier/configs/resnet18.yaml")
     parser.add_argument("--batches", type=int, default=3, help="测几个训练 batch")
     args = parser.parse_args()
 

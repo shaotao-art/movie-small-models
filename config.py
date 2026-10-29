@@ -27,7 +27,7 @@ DECODE_WORKERS = 1           # DataLoader 解码进程数
 PREFETCH_FACTOR = 2          # 每个解码进程预取批数
 
 # 已部署的 SFT VLM（字幕提取，OpenAI 兼容接口）
-VLM_BASE_URL = os.environ.get("VLM_BASE_URL", "http://30.14.1.197:8080")
+VLM_BASE_URL = os.environ.get("VLM_BASE_URL", "http://11.216.82.146:8082")
 VLM_API_KEY = os.environ.get("AIO_API_KEY", "dummy")
 VLM_WORKERS = 16
 VLM_TIMEOUT = 120.0
@@ -46,7 +46,7 @@ SFT_PROMPT = (
 
 # 整片字幕分析（subtitles/analyze_video.py：分类 + 提取）
 ANALYZE_CKPT = "ckp-tag/best_weights_cls_mobilenet_v3.pth"
-ANALYZE_CONFIG = "configs/mobilenet_v3_small.yaml"  # 纯权重文件需要配套配置
+ANALYZE_CONFIG = "classifier/configs/mobilenet_v3_small.yaml"  # 纯权重文件需要配套配置
 ANALYZE_OUTPUT_DIR = "outputs/analyze"
 ANALYZE_TEST_DIR = "outputs/analyze_test"
 ANALYZE_INTERVAL = 0.1        # 抽帧间隔（秒）

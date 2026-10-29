@@ -5,7 +5,7 @@
     python -m classifier.eval --ckpt outputs/resnet18/best.pth --image data/frames/xxx/frame_000001.jpg
     python -m classifier.eval --ckpt outputs/resnet18/best.pth --image-list list.txt -o preds.jsonl
     # 纯权重（tools/export_weights.py 导出）需要 --config
-    python -m classifier.eval --ckpt outputs/resnet18/best_weights.pth --config configs/resnet18.yaml --image a.jpg
+    python -m classifier.eval --ckpt outputs/resnet18/best_weights.pth --config classifier/configs/resnet18.yaml --image a.jpg
     # 视频请用 subtitles/eval_video.py
 """
 
@@ -22,7 +22,7 @@ from config import CLASSIFIER_BATCH_SIZE, EVAL_RESULTS
 from classifier.data import _transforms
 from data_making.srt_model.build_cls_dataset import resolve_image
 from classifier.model import build_model
-from classifier.utils import load_config
+from classifier.utils import default_device, load_config
 
 logger = logging.getLogger("eval")
 
@@ -95,7 +95,7 @@ def main(argv=None):
     parser.add_argument("--classes", default=None, help="逗号分隔的类别顺序，默认从训练集目录推断")
     parser.add_argument("-o", "--output", default=EVAL_RESULTS)
     parser.add_argument("--batch-size", type=int, default=CLASSIFIER_BATCH_SIZE)
-    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--device", default=default_device(), help="默认 cuda > mps > cpu")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

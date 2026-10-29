@@ -14,6 +14,15 @@ def load_config(path):
         return yaml.safe_load(f)
 
 
+def default_device():
+    """推理设备降级：cuda > mps > cpu。"""
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
 def setup_logging(rank, log_file=None):
     handlers = [logging.StreamHandler()]
     if rank == 0 and log_file:

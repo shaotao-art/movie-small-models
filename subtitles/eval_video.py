@@ -8,7 +8,7 @@ IterableDataset + DataLoader(num_workers=1, prefetch_factor=2)：
 用法:
     python -m subtitles.eval_video --ckpt outputs/resnet18/best.pth --video movie.mp4
     python -m subtitles.eval_video --ckpt outputs/efficientnet_b0/best_weights.pth \
-        --config configs/efficientnet_b0.yaml --video movie.mp4 --interval 10 -o outputs/movie_eval.jsonl
+        --config classifier/configs/efficientnet_b0.yaml --video movie.mp4 --interval 10 -o outputs/movie_eval.jsonl
 """
 
 import argparse
@@ -27,6 +27,7 @@ from config import (
     IMAGENET_MEAN, IMAGENET_STD, PREFETCH_FACTOR, VIDEO_INTERVAL,
 )
 from classifier.eval import load_model
+from classifier.utils import default_device
 
 logger = logging.getLogger("eval_video")
 
@@ -112,7 +113,7 @@ def main(argv=None):
     parser.add_argument("--batch-size", type=int, default=CLASSIFIER_VIDEO_BATCH_SIZE)
     parser.add_argument("--workers", type=int, default=DECODE_WORKERS, help="DataLoader 解码进程数")
     parser.add_argument("--prefetch", type=int, default=PREFETCH_FACTOR, help="每个 worker 预取批数")
-    parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument("--device", default=default_device(), help="默认 cuda > mps > cpu")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
