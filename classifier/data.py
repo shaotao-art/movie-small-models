@@ -5,21 +5,20 @@ from torch.utils.data.distributed import DistributedSampler
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 
-from config import IMAGENET_MEAN, IMAGENET_STD, RESIZE_RATIO
+from config import IMAGENET_MEAN, IMAGENET_STD
 
 
 def _transforms(image_size):
+    # 只缩放不裁剪：中心裁剪会切掉画面底部的字幕，直接改变样本本身
+    size = (image_size, image_size)
     train_tf = transforms.Compose([
-        # transforms.RandomResizedCrop(image_size, scale=(0.7, 1.0)),
-        # transforms.RandomHorizontalFlip(),
-        transforms.Resize(int(image_size * RESIZE_RATIO)),
-        transforms.CenterCrop(image_size),
+        transforms.RandomHorizontalFlip(),
+        transforms.Resize(size),
         transforms.ToTensor(),
         transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
     ])
     val_tf = transforms.Compose([
-        transforms.Resize(int(image_size * RESIZE_RATIO)),
-        transforms.CenterCrop(image_size),
+        transforms.Resize(size),
         transforms.ToTensor(),
         transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD),
     ])

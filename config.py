@@ -18,7 +18,6 @@ WEIGHTS_SUFFIX = "_weights.pth"
 # 图像预处理（ImageNet 归一化，与训练一致）
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
-RESIZE_RATIO = 1.14
 
 # 分类器推理
 CLASSIFIER_BATCH_SIZE = 64

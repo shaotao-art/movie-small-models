@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader, IterableDataset
 
 from config import (
     CLASSIFIER_VIDEO_BATCH_SIZE, DECODE_WORKERS, EVAL_VIDEO_RESULTS,
-    IMAGENET_MEAN, IMAGENET_STD, PREFETCH_FACTOR, RESIZE_RATIO, VIDEO_INTERVAL,
+    IMAGENET_MEAN, IMAGENET_STD, PREFETCH_FACTOR, VIDEO_INTERVAL,
 )
 from classifier.eval import load_model
 
@@ -78,14 +78,10 @@ class VideoBatchDataset(IterableDataset):
 
     @staticmethod
     def _resize(frame, image_size):
-        """等价于 val 变换的 Resize(int(size*1.14)) + CenterCrop(size)。"""
+        """等价于 val 变换的 Resize((size, size))：只缩放不裁剪，底部的字幕不会被切掉。"""
         h, w = frame.shape[:2]
-        scale = int(image_size * RESIZE_RATIO) / min(h, w)
-        nw, nh = round(w * scale), round(h * scale)
-        interp = cv2.INTER_AREA if scale < 1 else cv2.INTER_LINEAR
-        frame = cv2.resize(frame, (nw, nh), interpolation=interp)
-        top, left = (nh - image_size) // 2, (nw - image_size) // 2
-        return frame[top:top + image_size, left:left + image_size]
+        interp = cv2.INTER_AREA if image_size < min(h, w) else cv2.INTER_LINEAR
+        return cv2.resize(frame, (image_size, image_size), interpolation=interp)
 
     @staticmethod
     def _batch(frames, indices, fps):
