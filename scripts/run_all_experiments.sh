@@ -9,11 +9,7 @@ cd "$(dirname "$0")/.."
 TRAIN_CMD="${TRAIN_CMD:-python -m classifier.train}"
 
 for cfg in \
-  configs/mobilenet_v3_large.yaml \
-  configs/efficientnet_b0.yaml \
-  configs/regnet_x_400mf.yaml \
-  configs/mnasnet0_75.yaml \
-  configs/resnet18.yaml
+  classifier/configs/mobilenet_v3_small.yaml\
 do
   echo "========== $cfg =========="
   $TRAIN_CMD --config "$cfg"
