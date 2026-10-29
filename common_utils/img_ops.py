@@ -64,9 +64,9 @@ def resize_image_max_side(image_array: np.ndarray, x: int):
     return img_resized
 
 
-def smart_resize_img(image_array: np.ndarray, max_pixels: int):
+def smart_resize_img(image_array: np.ndarray, max_pixels: int, factor: int = 28):
     height, width = image_array.shape[:2]
-    new_height, new_width = smart_resize(height, width, max_pixels)
+    new_height, new_width = smart_resize(height, width, max_pixels, factor=factor)
     img_resized = cv2.resize(
         image_array, (new_width, new_height), interpolation=cv2.INTER_AREA
     )

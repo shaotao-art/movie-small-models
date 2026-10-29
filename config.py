@@ -33,7 +33,9 @@ VLM_WORKERS = 16
 VLM_TIMEOUT = 120.0
 VLM_RETRIES = 3
 VLM_BATCH_SIZE = 16          # 解码批大小（4K 帧别开太大）
-VLM_MAX_SIDE = 896           # 上传前长边缩放
+VLM_MAX_SIDE = 896           # 数据制作时上传前的长边缩放
+VLM_MAX_PIXELS = 1024 * 32 * 32  # 整片推理（infer_video）的像素预算，与 SFT 训练的 --max_pixels 一致
+VLM_IMG_FACTOR = 32              # 长宽对齐到 32 的倍数
 
 # SFT 提示词
 SFT_PROMPT = (

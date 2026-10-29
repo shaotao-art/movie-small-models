@@ -19,9 +19,10 @@ from concurrent.futures import ThreadPoolExecutor
 from PIL import Image
 from torch.utils.data import DataLoader
 
+from common_utils.img_ops import smart_resize_img
 from config import (
-    SFT_PROMPT, VLM_API_KEY, VLM_BASE_URL, VLM_BATCH_SIZE, VLM_OUTPUT_SUFFIX,
-    VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
+    SFT_PROMPT, VLM_API_KEY, VLM_BASE_URL, VLM_BATCH_SIZE, VLM_IMG_FACTOR,
+    VLM_MAX_PIXELS, VLM_OUTPUT_SUFFIX, VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS,
 )
 from data_making.srt_model.dist_use_qwen38 import SubtitleClient, resolve_model
 from subtitles.eval_video import VideoBatchDataset
@@ -122,8 +123,12 @@ def main(argv=None):
 
                 futures = []
                 for pos, idx in enumerate(batch["indices"].tolist()):
-                    image = Image.fromarray(batch["images"][pos].permute(1, 2, 0).contiguous().numpy())
-                    futures.append((recs[idx], pool.submit(client.predict, image, f"{video}:{idx}")))
+                    # 按训练时的像素预算缩放（对齐 32 的倍数、不裁切），再交给 client；
+                    # 传 max_side=None 让 encode_pil 别再按 896 长边二次缩小
+                    image = batch["images"][pos].permute(1, 2, 0).contiguous().numpy()  # RGB
+                    image = smart_resize_img(image, VLM_MAX_PIXELS, factor=VLM_IMG_FACTOR)
+                    futures.append((recs[idx], pool.submit(
+                        client.predict, Image.fromarray(image), f"{video}:{idx}", max_side=None)))
                 for rec, future in futures:
                     try:
                         res = future.result()

@@ -9,7 +9,7 @@ cd "$(dirname "$0")/.."
 TRAIN_CMD="${TRAIN_CMD:-python -m classifier.train}"
 
 for cfg in \
-  classifier/configs/mobilenet_v3_small.yaml\
+  classifier/configs/mobilenet_v3_small.yaml
 do
   echo "========== $cfg =========="
   $TRAIN_CMD --config "$cfg"

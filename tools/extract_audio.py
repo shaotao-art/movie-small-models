@@ -13,6 +13,8 @@ import os
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from render.patch_video_subtitles import find_ffmpeg
 
 VIDEO_EXT = {".mp4", ".mkv", ".rmvb", ".avi", ".mov", ".ts", ".m4v", ".flv", ".wmv"}

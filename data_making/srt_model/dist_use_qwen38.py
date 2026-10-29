@@ -26,7 +26,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from config import VLM_API_KEY, VLM_BASE_URL, VLM_MAX_SIDE, VLM_RETRIES, VLM_TIMEOUT, VLM_WORKERS
 
@@ -34,11 +34,15 @@ logger = logging.getLogger("qwen")
 
 
 def encode_pil(im, max_side=VLM_MAX_SIDE):
-    """长边缩放到 max_side 后编码为 base64 JPEG，减少上传体积和视觉 token。"""
+    """长边缩放到 max_side 后编码为 base64 JPEG，减少上传体积和视觉 token。
+
+    max_side=None 时原样编码（调用方自己已经做过缩放的场景，例如 subtitles/infer_video.py）。
+    """
     im = im.convert("RGB")
-    scale = max_side / max(im.size)
-    size = (round(im.width * scale), round(im.height * scale))
-    im = im.resize(size, Image.Resampling.LANCZOS)
+    if max_side:
+        scale = max_side / max(im.size)
+        size = (round(im.width * scale), round(im.height * scale))
+        im = im.resize(size, Image.Resampling.LANCZOS)
     buf = io.BytesIO()
     im.save(buf, format="JPEG", quality=95)
     return base64.b64encode(buf.getvalue()).decode()
@@ -101,9 +105,9 @@ class SubtitleClient:
             image = im.convert("RGB")
         return self.predict(image, image_path)
 
-    def predict(self, image, name):
-        """image 为 PIL 图；name 用于日志和返回记录。"""
-        data_url = f"data:image/jpeg;base64,{encode_pil(image)}"
+    def predict(self, image, name, max_side=VLM_MAX_SIDE):
+        """image 为 PIL 图；name 用于日志和返回记录；max_side=None 表示不再缩放。"""
+        data_url = f"data:image/jpeg;base64,{encode_pil(image, max_side)}"
 
         payload = {
             "model": self.model,

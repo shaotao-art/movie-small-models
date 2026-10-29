@@ -2,8 +2,8 @@
 """把 all_images.jsonl 转成 ms-swift SFT 格式（每张图一条：<image> + 提示词 -> 结果 JSON）。
 
 用法:
-    python data_making/make_sft_jsonl.py
-    python data_making/make_sft_jsonl.py -i data/all_images.jsonl -o outputs/subtitle_sft.jsonl
+    python data_making/srt_model/make_sft_jsonl.py
+    python data_making/srt_model/make_sft_jsonl.py -i data/all_images.jsonl -o outputs/subtitle_sft.jsonl
 """
 
 import argparse
@@ -11,7 +11,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from config import ALL_IMAGES_JSONL, SFT_JSONL, SFT_PROMPT
 
