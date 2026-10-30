@@ -99,6 +99,7 @@ def main(argv=None):
     parser.add_argument("--workers", type=int, default=VLM_WORKERS, help="VLM 并发数")
     parser.add_argument("--vlm-batch", type=int, default=VLM_BATCH_SIZE, help="VLM 解码批大小")
     parser.add_argument("-o", "--output-dir", default=None)
+    parser.add_argument("--force", action="store_true", help="已有分类结果也重新分类")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -127,12 +128,15 @@ def main(argv=None):
     sub_out = os.path.join(out_dir, stem + "_subtitles.jsonl")
     txt_out = os.path.join(out_dir, stem + "_subtitles.txt")
 
-    logger.info("分类 %s（每 %.1fs 一帧）-> %s", video, args.interval, cls_out)
-    run_classifier([
-        "--ckpt", args.ckpt, "--config", args.config, "--video", video,
-        "--interval", str(args.interval), "--batch-size", str(args.batch_size),
-        "-o", cls_out,
-    ])
+    if os.path.exists(cls_out) and os.path.getsize(cls_out) > 0 and not args.force:
+        logger.info("分类结果已存在，跳过分类（--force 强制重跑）: %s", cls_out)
+    else:
+        logger.info("分类 %s（每 %.1fs 一帧）-> %s", video, args.interval, cls_out)
+        run_classifier([
+            "--ckpt", args.ckpt, "--config", args.config, "--video", video,
+            "--interval", str(args.interval), "--batch-size", str(args.batch_size),
+            "-o", cls_out,
+        ])
 
     logger.info("VLM 提取字幕 %s -> %s", args.vlm_url, sub_out)
     rc = run_vlm([

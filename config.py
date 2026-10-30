@@ -27,7 +27,7 @@ DECODE_WORKERS = 1           # DataLoader 解码进程数
 PREFETCH_FACTOR = 2          # 每个解码进程预取批数
 
 # 已部署的 SFT VLM（字幕提取，OpenAI 兼容接口）
-VLM_BASE_URL = os.environ.get("VLM_BASE_URL", "http://11.216.82.146:8082")
+VLM_BASE_URL = os.environ.get("VLM_BASE_URL", "http://11.216.82.146:8081")
 VLM_API_KEY = os.environ.get("AIO_API_KEY", "dummy")
 VLM_WORKERS = 16
 VLM_TIMEOUT = 120.0

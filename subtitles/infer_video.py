@@ -37,7 +37,10 @@ def read_frames(path):
         for line in f:
             if not line.strip():
                 continue
-            rec = json.loads(line)
+            try:
+                rec = json.loads(line)
+            except json.JSONDecodeError:
+                continue  # 上次中断留下的半行
             if not (rec.get("result") or {}).get("has_subtitle"):
                 continue
             video, idx = rec.get("video"), rec.get("frame_index")
