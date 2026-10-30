@@ -1,0 +1,31 @@
+seed: 42
+output_dir: outputs
+
+data:
+  root: data/pairs
+  manifests:
+    train: data/pairs/train.jsonl
+    val: data/pairs/val.jsonl
+  size: [448, 128]        # 裁剪后的输入尺寸（宽 x 高）
+  crop: [0.125, 0.8, 0.875, 1.0]  # x0,y0,x1,y1：底部 1/5，左右各去掉 1/8
+  num_workers: 8
+
+model:
+  name: mobilenet_v3_small
+  pair: true              # 双图：两帧共享 backbone
+  num_classes: 2
+  pretrained: true
+  dropout: 0.2
+
+train:
+  global_batch_size: 64   # 一个 pair 算一个样本（实际每步 128 张图）
+  max_micro_batch_size: null
+  epochs: 10
+  lr: 0.0005
+  weight_decay: 0.0001
+  log_freq: 20
+  amp: true               # 仅 CUDA 生效
+
+swanlab:
+  project: subtitle-pair
+  experiment_name: pair_mobilenet_v3_small

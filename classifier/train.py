@@ -11,7 +11,8 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from classifier.data import build_dataloaders
-from classifier.model import build_model
+from classifier.model import build_model, build_pair_model
+from classifier.pair_data import build_manifest_dataloaders
 from classifier.utils import evaluate, load_config, seed_everything, setup_logging, train_one_epoch
 
 
@@ -64,16 +65,20 @@ def main():
         )
 
     data_cfg = dict(cfg["data"], batch_size=per_rank)
-    train_loader, val_loader, train_sampler = build_dataloaders(data_cfg, distributed)
-    if cfg["model"]["num_classes"] != len(train_loader.dataset.classes):
-        logger.warning(
-            "model.num_classes=%d but dataset has %d classes",
-            cfg["model"]["num_classes"], len(train_loader.dataset.classes),
-        )
+    if "manifests" in data_cfg:  # 双图 pair 数据集
+        train_loader, val_loader, train_sampler = build_manifest_dataloaders(data_cfg, distributed)
+    else:
+        train_loader, val_loader, train_sampler = build_dataloaders(data_cfg, distributed)
+        if cfg["model"]["num_classes"] != len(train_loader.dataset.classes):
+            logger.warning(
+                "model.num_classes=%d but dataset has %d classes",
+                cfg["model"]["num_classes"], len(train_loader.dataset.classes),
+            )
     logger.info("train samples: %d, val samples: %d, world size: %d",
                 len(train_loader.dataset), len(val_loader.dataset), world_size)
 
-    model = build_model(cfg["model"]).to(device)
+    build = build_pair_model if cfg["model"].get("pair") else build_model
+    model = build(cfg["model"]).to(device)
     if distributed:
         model = DDP(model, device_ids=[local_rank] if use_cuda else None)
 
