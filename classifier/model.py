@@ -37,7 +37,7 @@ PAIR_BACKBONES = {
     "mobilenet_v3_small": (models.mobilenet_v3_small, 576),
     "mobilenet_v3_large": (models.mobilenet_v3_large, 960),
     "efficientnet_b0": (models.efficientnet_b0, 1280),
-    "mnasnet0_75": (models.mnasnet0_75, 1280),
+    "resnet18": (models.resnet18, 512),
 }
 
 
@@ -72,5 +72,8 @@ def build_pair_model(cfg):
         raise ValueError(f"{name!r} 没有注册双图 backbone，可选: {list(PAIR_BACKBONES)}")
     builder, feat_dim = PAIR_BACKBONES[name]
     net = builder(weights="DEFAULT" if cfg.get("pretrained") else None)
-    backbone = nn.Sequential(net.features, nn.AdaptiveAvgPool2d(1), nn.Flatten())
+    if hasattr(net, "features"):  # mobilenet / efficientnet：features + 全局池化
+        backbone = nn.Sequential(net.features, nn.AdaptiveAvgPool2d(1), nn.Flatten())
+    else:  # resnet：去掉 fc，保留 avgpool
+        backbone = nn.Sequential(*list(net.children())[:-1], nn.Flatten())
     return PairModel(backbone, feat_dim, cfg.get("num_classes", 2), cfg.get("dropout", 0.2))

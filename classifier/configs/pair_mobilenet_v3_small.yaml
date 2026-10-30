@@ -6,11 +6,13 @@ data:
   manifests:
     train: data/pairs/train.jsonl
     val: data/pairs/val.jsonl
-  size: [448, 128]        # 裁剪后的输入尺寸（宽 x 高）
+  size: [224, 224]        # 裁剪后统一 resize 到的输入尺寸（宽 x 高）
   crop: [0.125, 0.8, 0.875, 1.0]  # x0,y0,x1,y1：底部 1/5，左右各去掉 1/8
+  flip: h                 # 训练增强：none=不翻 / h=水平翻转 / hv=水平+竖直（180°）；一对图同步翻
   num_workers: 8
 
 model:
+  # 可选：mobilenet_v3_small / mobilenet_v3_large / efficientnet_b0 / resnet18
   name: mobilenet_v3_small
   pair: true              # 双图：两帧共享 backbone
   num_classes: 2

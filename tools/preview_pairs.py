@@ -121,7 +121,7 @@ def main(argv=None):
     parser.add_argument("--cues", required=True, help="cues 目录或 jsonl")
     parser.add_argument("-o", "--output", default=None, help="默认 <cues 上级目录>/preview.html")
     parser.add_argument("--per-type", type=int, default=8, help="每类展示几对（默认 8）")
-    parser.add_argument("--size", default="448x128", help="模型输入尺寸 WxH（默认 448x128）")
+    parser.add_argument("--size", default="224x224", help="模型输入尺寸 WxH（默认 224x224）")
     parser.add_argument("--crop", nargs=4, type=float, default=[0.125, 0.8, 0.875, 1.0],
                         metavar=("X0", "Y0", "X1", "Y1"), help="按比例裁剪字幕区（默认底部 1/5、左右各 1/8）")
     args = parser.parse_args(argv)

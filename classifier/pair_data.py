@@ -40,14 +40,29 @@ def build_transform(train):
 
 DEFAULT_CROP = (0.125, 0.8, 0.875, 1.0)  # x0, y0, x1, y1：底部 1/5，左右各去掉 1/8
 
+# 增强方式：none=不翻，h=水平翻转，hv=水平+竖直（等价于 180° 旋转）
+FLIP_MODES = {
+    "none": None,
+    "h": Image.FLIP_LEFT_RIGHT,
+    "hv": Image.ROTATE_180,
+}
 
-def load_image(root, rel, size, crop, tf):
-    """读图 -> 按 crop 比例裁剪（字幕区）-> 缩放到固定尺寸 -> 张量化。"""
+
+def load_image(root, rel, size, crop, tf, flip_mode=None):
+    """读图 -> 按 crop 比例裁剪（字幕区）-> 可选翻转 -> 缩放到固定尺寸 -> 张量化。"""
     img = Image.open(os.path.join(root, rel)).convert("RGB")
     w, h = img.size
     x0, y0, x1, y1 = crop
     img = img.crop((int(w * x0), int(h * y0), int(w * x1), int(h * y1)))
+    if flip_mode:
+        img = img.transpose(flip_mode)
     return tf(img.resize(size, Image.BICUBIC))
+
+
+def check_flip(mode):
+    if mode not in FLIP_MODES:
+        raise ValueError(f"未知的 flip 模式 {mode!r}，可选: {list(FLIP_MODES)}")
+    return mode
 
 
 def load_cues(paths):
@@ -71,10 +86,11 @@ def load_cues(paths):
 
 
 class PairDataset(Dataset):
-    def __init__(self, cues, size=(448, 128), crop=DEFAULT_CROP, train=True, seed=0):
+    def __init__(self, cues, size=(224, 224), crop=DEFAULT_CROP, flip="h", train=True, seed=0):
         self.cues = cues
         self.size = (size, size) if isinstance(size, int) else tuple(size)
         self.crop = tuple(crop)
+        self.flip_mode = check_flip(flip)
         self.train = train
         self.rng = random.Random(seed)
         self.groups = {}  # movie -> [cue 在 self.cues 中的下标]
@@ -139,7 +155,9 @@ class PairDataset(Dataset):
             fb = random.choice(ci["frames"][len(ci["frames"]) // 2:])
         else:
             fa, fb = random.choice(ci["frames"]), random.choice(cj["frames"])
-        a, b = self._load(ci["root"], fa), self._load(cj["root"], fb)
+        flip = FLIP_MODES[self.flip_mode] if self.train and random.random() < 0.5 else None
+        a = load_image(ci["root"], fa, self.size, self.crop, self.tf, flip)  # 一对图必须同时翻/不翻
+        b = load_image(cj["root"], fb, self.size, self.crop, self.tf, flip)
         return torch.stack([a, b]), label
 
     # ---------- 读图 ----------
@@ -157,7 +175,8 @@ def build_pair_dataloaders(cfg, distributed=False):
     if not train_cues or not val_cues:
         raise ValueError(f"按电影切分后 train={len(train_cues)} val={len(val_cues)}，至少各要 1 条")
 
-    kw = dict(size=cfg.get("size", (448, 128)), crop=cfg.get("crop", DEFAULT_CROP))
+    kw = dict(size=cfg.get("size", (224, 224)), crop=cfg.get("crop", DEFAULT_CROP),
+              flip=cfg.get("flip", "h"))
     train_ds = PairDataset(train_cues, train=True, **kw)
     val_ds = PairDataset(val_cues, train=False, **kw)
 
@@ -174,7 +193,7 @@ def build_pair_dataloaders(cfg, distributed=False):
 class ManifestPairDataset(Dataset):
     """读 data_making/srt_model/build_pairs.py 生成的 train.jsonl / val.jsonl。"""
 
-    def __init__(self, manifest, root, size=(448, 128), crop=DEFAULT_CROP, train=False):
+    def __init__(self, manifest, root, size=(224, 224), crop=DEFAULT_CROP, flip="h", train=False):
         with open(manifest) as f:
             self.rows = [json.loads(line) for line in f if line.strip()]
         if not self.rows:
@@ -182,6 +201,8 @@ class ManifestPairDataset(Dataset):
         self.root = root
         self.size = (size, size) if isinstance(size, int) else tuple(size)
         self.crop = tuple(crop)
+        self.flip_mode = check_flip(flip)
+        self.flip_train = train
         self.tf = build_transform(train)
 
     def __len__(self):
@@ -189,14 +210,16 @@ class ManifestPairDataset(Dataset):
 
     def __getitem__(self, idx):
         row = self.rows[idx]
-        a = load_image(self.root, row["a"], self.size, self.crop, self.tf)
-        b = load_image(self.root, row["b"], self.size, self.crop, self.tf)
+        flip = FLIP_MODES[self.flip_mode] if self.flip_train and random.random() < 0.5 else None
+        a = load_image(self.root, row["a"], self.size, self.crop, self.tf, flip)  # 一对图必须同时翻/不翻
+        b = load_image(self.root, row["b"], self.size, self.crop, self.tf, flip)
         return torch.stack([a, b]), row["label"]
 
 
 def build_manifest_dataloaders(cfg, distributed=False):
     """cfg 的 data 段：root / manifests{train,val} / size / crop / batch_size / num_workers。"""
-    kw = dict(size=cfg.get("size", (448, 128)), crop=cfg.get("crop", DEFAULT_CROP))
+    kw = dict(size=cfg.get("size", (224, 224)), crop=cfg.get("crop", DEFAULT_CROP),
+              flip=cfg.get("flip", "h"))
     root = cfg.get("root", "data/pairs")
     train_ds = ManifestPairDataset(cfg["manifests"]["train"], root, train=True, **kw)
     val_ds = ManifestPairDataset(cfg["manifests"]["val"], root, train=False, **kw)
